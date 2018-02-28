@@ -1,4 +1,4 @@
-Triton Testnet integration/staging tree
+Triton integration/staging tree
 =====================================
 
 https://triton-io.github.io/

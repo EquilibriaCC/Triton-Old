@@ -129,9 +129,11 @@ namespace parameters {
 #define P2P_STAT_TRUSTED_PUB_KEY                        "8f80f23dsa434a9f15123dsfd133362423402f32312sad9c918ce505efe225d8c94d045fa115"
 
 const std::initializer_list<const char*> SEED_NODES {
-  "93.188.161.244:9730",
-  "165.227.99.38:9730",
-  "165.227.125.101:9730"
+  "93.188.161.244:9730",//us
+  "165.227.99.38:9730",//us
+  "165.227.125.101:9730",//us
+  "178.62.5.221:9730", //eu
+  "128.199.165.75:9730"//as
 };
 
 struct CheckpointData {
@@ -144,7 +146,9 @@ __attribute__((unused))
 #endif
 
 const std::initializer_list<CheckpointData> CHECKPOINTS {
-//  { 1, "5220a193ed61aabd5807ab8e1c948cd97bb45a53487975949fa9fef06c5fab05" },
+  { 1, "61fab02c04d60d6c9904dab46250a9e6d360f4724107bc83e7d63dfd9929b9df" },
+  { 500, "924ae6502ecaa9ba512c95faf1e476dcffbea6181539a82c76306b68f187e712" },
+  { 1000, "ccdc4ce7eb6ada472b042c6dfb08f37710c9902551c8d462143837d430f401ec" },
  
 };
 

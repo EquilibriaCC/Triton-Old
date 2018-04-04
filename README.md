@@ -1,7 +1,7 @@
 Triton integration/staging tree
 =====================================
 
-https://triton-io.github.io/
+http://tritonproject.org
 
 What is Triton?
 ----------------

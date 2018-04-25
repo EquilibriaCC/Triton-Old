@@ -49,7 +49,7 @@ namespace parameters {
 #define DEFAULT_FEE                                     (uint64_t)pow(10, CRYPTONOTE_MONEY_DECIMAL_POINT - 2)
 #define DEFAULT_DUST_THRESHOLD                          MINIMUM_FEE
 
-#define TX_SAFETY_NET					                          20000 // upper safety net to prevent stuck transactions
+#define TX_SAFETY_NET					                20000 // upper safety net to prevent stuck transactions
 #define MAX_TRANSACTION_SIZE_LIMIT                      CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE / 4 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE
 
 #define DIFFICULTY_TARGET                               180
@@ -82,6 +82,7 @@ namespace parameters {
 #define KEY_IMAGE_CHECKING_BLOCK_INDEX                  0
 #define UPGRADE_HEIGHT_V2                               1
 #define UPGRADE_HEIGHT_V3                               2
+#define UPGRADE_HEIGHT_V4                               24830
 #define UPGRADE_VOTING_THRESHOLD                        90
 #define UPGRADE_VOTING_WINDOW                           EXPECTED_NUMBER_OF_BLOCKS_PER_DAY
 #define UPGRADE_WINDOW                                  EXPECTED_NUMBER_OF_BLOCKS_PER_DAY
@@ -103,6 +104,7 @@ namespace parameters {
 #define BLOCK_MAJOR_VERSION_1                           1
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
+#define BLOCK_MAJOR_VERSION_4                           4
 #define BLOCK_MINOR_VERSION_0                           0
 #define BLOCK_MINOR_VERSION_1                           1
 
@@ -163,7 +165,9 @@ const std::initializer_list<CheckpointData> CHECKPOINTS {
   { 19000, "aad805a34eb4441b95c1d681ad69a88555497194e84178e643f903a92f5da332" },
   { 20000, "317715723300de19864e308b282f79d467981cfed56aa0542b7e5dbb8857bdfa" },
   { 21000, "7070666766e6003373470dce894dd2ebc490993154f4527bc3601e375853004c" },
-
+  { 22000, "e216b479570e939b588512cfb2fcd6dab19c6f9225781942255b8371b48cc3c1" },
+  { 23000, "458429c052ad56b51b4bdbc75543518b718e27f5867495a4cadb638743e433ea" },
+  { 24000, "9bb34039cca0d2eab3af512545ca8fba88b261565275269c810930006cd3b914" },
 
 
 

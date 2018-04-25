@@ -169,4 +169,4 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/version")
 
 add_subdirectory(external)
 add_subdirectory(src)
-add_subdirectory(tests)
+#add_subdirectory(tests)

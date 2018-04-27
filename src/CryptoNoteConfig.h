@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2017-2018, The Alloy Developers.
+ * Copyright (c) 2017-2018, The Triton Developers.
  * Portions Copyright (c) 2012-2017, The CryptoNote Developers, The Bytecoin Developers.
  *
- * This file is part of Alloy.
+ * This file is part of Triton.
  *
  * This file is subject to the terms and conditions defined in the
  * file 'LICENSE', which is part of this source code package.
@@ -49,7 +49,7 @@ namespace parameters {
 #define DEFAULT_FEE                                     (uint64_t)pow(10, CRYPTONOTE_MONEY_DECIMAL_POINT - 2)
 #define DEFAULT_DUST_THRESHOLD                          MINIMUM_FEE
 
-#define TX_SAFETY_NET					                20000 // upper safety net to prevent stuck transactions
+#define TX_SAFETY_NET					                          20000 // upper safety net to prevent stuck transactions
 #define MAX_TRANSACTION_SIZE_LIMIT                      CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE / 4 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE
 
 #define DIFFICULTY_TARGET                               180
@@ -57,7 +57,6 @@ namespace parameters {
 #define DIFFICULTY_WINDOW                               EXPECTED_NUMBER_OF_BLOCKS_PER_DAY
 #define DIFFICULTY_WINDOW_V1                            DIFFICULTY_WINDOW
 #define DIFFICULTY_WINDOW_V2                            DIFFICULTY_WINDOW
-#define DIFFICULTY_WINDOW_V5                            60
 #define DIFFICULTY_CUT                                  60
 #define DIFFICULTY_CUT_V1                               DIFFICULTY_CUT
 #define DIFFICULTY_CUT_V2                               DIFFICULTY_CUT
@@ -84,7 +83,6 @@ namespace parameters {
 #define UPGRADE_HEIGHT_V2                               1
 #define UPGRADE_HEIGHT_V3                               2
 #define UPGRADE_HEIGHT_V4                               24830
-#define UPGRADE_HEIGHT_V5                               24900
 #define UPGRADE_VOTING_THRESHOLD                        90
 #define UPGRADE_VOTING_WINDOW                           EXPECTED_NUMBER_OF_BLOCKS_PER_DAY
 #define UPGRADE_WINDOW                                  EXPECTED_NUMBER_OF_BLOCKS_PER_DAY
@@ -107,7 +105,6 @@ namespace parameters {
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
 #define BLOCK_MAJOR_VERSION_4                           4
-#define BLOCK_MAJOR_VERSION_5                           5
 #define BLOCK_MINOR_VERSION_0                           0
 #define BLOCK_MINOR_VERSION_1                           1
 
@@ -168,14 +165,6 @@ const std::initializer_list<CheckpointData> CHECKPOINTS {
   { 19000, "aad805a34eb4441b95c1d681ad69a88555497194e84178e643f903a92f5da332" },
   { 20000, "317715723300de19864e308b282f79d467981cfed56aa0542b7e5dbb8857bdfa" },
   { 21000, "7070666766e6003373470dce894dd2ebc490993154f4527bc3601e375853004c" },
-  { 22000, "e216b479570e939b588512cfb2fcd6dab19c6f9225781942255b8371b48cc3c1" },
-  { 23000, "458429c052ad56b51b4bdbc75543518b718e27f5867495a4cadb638743e433ea" },
-  { 24000, "9bb34039cca0d2eab3af512545ca8fba88b261565275269c810930006cd3b914" },
-  { 24831, "bd268052062a0c8fe3a6cdbb8346d2f862695e30d3d921b7762f12a81a33be49" },
-  { 24833, "eb218e2b3a7026922f020ba8af043132ead9af7304a2a068b5c5fe790ed153a7" },
-  { 24835, "63e447b36a2fbf3fe8e271a3ebde508ebd105d6668d9018b58c73baa653f26fb" },
-  { 24836, "d9c14070b36d1f28da4404ac3a173de1ae96ff048c21da21f3f4a2d4272515d8" },
-  { 24839, "3c106b71aa2f14c2308d91f2462bcf36fca540f7e14de0fdf691654f29d2b3e2" },
 
 
 

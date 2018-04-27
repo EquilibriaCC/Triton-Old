@@ -117,7 +117,7 @@ size_t Currency::difficultyWindowByBlockVersion(uint8_t blockMajorVersion) const
     return DIFFICULTY_WINDOW_V2;
   } else if(blockMajorVersion == BLOCK_MAJOR_VERSION_5){ 
 	return DIFFICULTY_WINDOW_V5;
-  }else if {
+  }else{
     return DIFFICULTY_WINDOW_V1;
   }
 }

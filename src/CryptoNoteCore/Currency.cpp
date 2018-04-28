@@ -439,7 +439,7 @@ bool Currency::parseAmount(const std::string& str, uint64_t& amount) const {
 Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
   std::vector<Difficulty> cumulativeDifficulties) const {
 	
-	
+	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 16000000;}
 	
 	// Taken from the fine folks at HavenProtocol 
 	// https://github.com/havenprotocol/haven/issues/3#issuecomment-378203016

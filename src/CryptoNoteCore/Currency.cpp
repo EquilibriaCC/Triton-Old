@@ -457,7 +457,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	// N=45, 55, 70, 90, 120 for T=600, 240, 120, 90, and 60
 	if (version >= BLOCK_MAJOR_VERSION_5) {
 		int T = m_difficultyTarget;
-		size_t N = CryptoNote::parameters::DIFFICULTY_WINDOW_V5;
+		size_t N = difficultyWindowByBlockVersion(version);
 		assert(N >= 2);
 		if (timestamps.size() > N) {
 			timestamps.resize(N);
@@ -489,7 +489,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 
 		if (w < T * length / 2) {w = T * length / 2;	}
 
-		difficulty_type totalWork = cumulativeDifficulties.back() - cumulativeDifficulties.front();
+		Difficulty totalWork = cumulativeDifficulties.back() - cumulativeDifficulties.front();
 		assert(totalWork > 0);
 		uint64_t low, high;
 		low = mul128(totalWork, k, &high);

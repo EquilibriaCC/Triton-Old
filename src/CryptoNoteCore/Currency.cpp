@@ -438,64 +438,51 @@ bool Currency::parseAmount(const std::string& str, uint64_t& amount) const {
 
 Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
   std::vector<Difficulty> cumulativeDifficulties) const {
-	//Invalidate last block and set diff at 10M
+	
 	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 10000000;}
-	// Taken from the fine folks at HavenProtocol 
-	// https://github.com/havenprotocol/haven/issues/3#issuecomment-378203016
-	// https://github.com/havenprotocol/haven/blob/2854ece45f173dd1e3ff217ddb9f145b80043931/src/cryptonote_basic/difficulty.cpp
-	// Who apparently based it on Karbo and feedback from the community.
-
-	// LWMA difficulty algorithm
-	// Copyright (c) 2017-2018 Zawy
-	// MIT license http://www.opensource.org/licenses/mit-license.php.
-	// This is an improved version of Tom Harding's (Deger8) "WT-144"
-	// Karbowanec, Masari, Bitcoin Gold, and Bitcoin Cash have contributed.
-	// See https://github.com/zawy12/difficulty-algorithms/issues/3 for other algos.
-	// Do not use "if solvetime < 0 then solvetime = 1" which allows a catastrophic exploit.
-	// T= target_solvetime;
-	// N=45, 55, 70, 90, 120 for T=600, 240, 120, 90, and 60
+	
 	if (version >= BLOCK_MAJOR_VERSION_5) {
-		int T = m_difficultyTarget;
-		size_t N = difficultyWindowByBlockVersion(version);
-		assert(N >= 2);
-		if (timestamps.size() > N) {
-			timestamps.resize(N);
-			cumulativeDifficulties.resize(N);
-		}
-		size_t length = timestamps.size();
-		assert(length == cumulativeDifficulties.size());
-		assert(length <= N);
-		if (length <= 1) { return 1; }
+		int64_t T = m_difficultyTarget;
 
-		uint64_t k = 0;
-		int64_t w = 0;
+	//printf("size ts:%lu\n",timestamps.size());
 
-		int j = 0, len = length;
+    size_t length = timestamps.size();
+    assert(length == cumulativeDifficulties.size());
 
-		const double_t adjust = pow(0.9989, 500 / T);
-		k = adjust * ((length + 1) / 2) * T;
+    int64_t  t = 0,d=0;
 
-		for (int i = 1; i < length; i++) {
-			int solvetime;
-			solvetime = timestamps[i] - timestamps[i - 1];
+	int solvetime=0;
+	int diff=0;
 
-			if (solvetime > 7 * T) { solvetime = 7 * T; }
-			if (solvetime < -(6 * T)) { solvetime = -(6 * T); }
+    for (size_t i = 1; i < length; i++) {
+        solvetime = timestamps[i] - timestamps[i-1];
+	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
+	//printf("%lu: TS:%lu    solvetime:%d,  diff:%d\n",i,timestamps[i],solvetime,diff);
 
-			j = j + 1;
-			w += solvetime * j;
-		}
+	//cap crazy  values
+    if (solvetime < 0) { solvetime = 0; }
 
-		if (w < T * length / 2) {w = T * length / 2;	}
+        t +=  solvetime ;
+		d+=diff;
 
-		Difficulty totalWork = cumulativeDifficulties.back() - cumulativeDifficulties.front();
-		assert(totalWork > 0);
-		uint64_t low, high;
-		low = mul128(totalWork, k, &high);
-		if (high != 0) {	return 0;	}
-		uint64_t nextDiffZ = low / w;
-		if (nextDiffZ <= 1) {	nextDiffZ = 1;	}
-		return nextDiffZ;
+
+    }
+
+
+	float avgtime=t/length;
+	float avgdiff=d/length;
+	float adj=T/avgtime;
+
+
+    uint64_t nextDiffZ = avgdiff*adj;
+	//printf("avgdiff:%f, avgtime:%f   adj:%f   nextdiff:%lu\n",avgdiff,avgtime,adj,nextDiffZ);
+
+    if (nextDiffZ <= 1) {
+      nextDiffZ = 1;
+    }
+
+  
+    return nextDiffZ;
   }
   //old
   std::vector<uint64_t> timestamps_o(timestamps);

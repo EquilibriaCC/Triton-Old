@@ -825,6 +825,7 @@ std::error_code Core::submitBlock(BinaryArray&& rawBlockTemplate) {
   }
 
   CachedBlock cachedBlock(blockTemplate);
+  logger(Logging::WARNING) << "BLOCK FOUND!!!!";
   return addBlock(cachedBlock, std::move(rawBlock));
 }
 

@@ -449,10 +449,10 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     size_t length = timestamps.size();
     assert(length == cumulativeDifficulties.size());
 
-    int64_t  t = 0,d=0;
+    uint64_t  t = 0,d=0;
 
-	int solvetime=0;
-	int diff=0;
+	int64_t solvetime=0;
+	int64_t diff=0;
 
     for (size_t i = 1; i < length; i++) {
         solvetime = timestamps[i] - timestamps[i-1];
@@ -469,12 +469,10 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     }
 
 
-	float avgtime=t/length;
-	float avgdiff=d/length;
-	float adj=T/avgtime;
-
-
-    uint64_t nextDiffZ = avgdiff*adj;
+	long unsigned int avgtime=t/length;
+	long unsigned int avgdiff=d/length;
+	long unsigned int adj=(T*1000/avgtime);
+	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
 	//printf("avgdiff:%f, avgtime:%f   adj:%f   nextdiff:%lu\n",avgdiff,avgtime,adj,nextDiffZ);
 
     if (nextDiffZ <= 1) {

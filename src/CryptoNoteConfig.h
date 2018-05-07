@@ -50,7 +50,7 @@ namespace parameters {
 #define DEFAULT_DUST_THRESHOLD                          MINIMUM_FEE
 
 #define TX_SAFETY_NET					                20000 // upper safety net to prevent stuck transactions
-#define MAX_TRANSACTION_SIZE_LIMIT                      CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE / 4 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE
+#define TRITON_TRANSACTION_SIZE_LIMIT                   100000
 
 #define DIFFICULTY_TARGET                               180
 #define EXPECTED_NUMBER_OF_BLOCKS_PER_DAY               24 * 60 * 60 / DIFFICULTY_TARGET

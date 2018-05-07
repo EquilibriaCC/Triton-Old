@@ -52,7 +52,7 @@ void constructTx(const AccountKeys keys, const std::vector<TransactionSourceEntr
     const std::string& extra, uint64_t unlockTimestamp, uint64_t sizeLimit, Transaction& tx) {
 
   // set a low bar to block sticking transactions
-  sizeLimit = std::min<unsigned long>(sizeLimit, TX_SAFETY_NET);
+  sizeLimit = std::min<unsigned long>(sizeLimit, TRITON_TRANSACTION_SIZE_LIMIT);
 //  printf("sizeLimit:%lu\n",sizeLimit);
 
 

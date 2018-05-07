@@ -83,7 +83,7 @@ std::vector<Crypto::Hash> TransactionPoolCleanWrapper::clean() {
     for (const auto& hash: transactionHashes) {
       uint64_t transactionAge = currentTime - transactionPool->getTransactionReceiveTime(hash);
       if (transactionAge >= timeout) {
-        logger(Logging::DEBUGGING) << "Deleting transaction " << Common::podToHex(hash) << " from pool";
+        logger(Logging::INFO) << "Deleting transaction " << Common::podToHex(hash) << " from pool";
         recentlyDeletedTransactions.emplace(hash, currentTime);
         transactionPool->removeTransaction(hash);
         deletedTransactions.emplace_back(std::move(hash));

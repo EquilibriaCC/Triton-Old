@@ -706,7 +706,7 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
   zawyDifficultyBlockVersion(ZAWY_DIFFICULTY_DIFFICULTY_BLOCK_VERSION);
   blockGrantedFullRewardZone(CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE);
   minerTxBlobReservedSize(CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE);
-  maxTransactionSizeLimit(MAX_TRANSACTION_SIZE_LIMIT);
+  maxTransactionSizeLimit(TRITON_TRANSACTION_SIZE_LIMIT);
 
   numberOfDecimalPlaces(CRYPTONOTE_MONEY_DECIMAL_POINT);
   numberOfDecimalUnits(CRYPTONOTE_MONEY_DECIMAL_UNITS);
@@ -726,7 +726,7 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
   lockedTxAllowedDeltaSeconds(CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_SECONDS);
   lockedTxAllowedDeltaBlocks(CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS);
 
-  mempoolTxLiveTime(CRYPTONOTE_MEMPOOL_TX_LIVETIME);
+  mempoolTxLiveTime(TRITON_TRANSACTION_SIZE_LIMIT);
   mempoolTxFromAltBlockLiveTime(CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME);
   numberOfPeriodsToForgetTxDeletedFromPool(CRYPTONOTE_NUMBER_OF_PERIODS_TO_FORGET_TX_DELETED_FROM_POOL);
 

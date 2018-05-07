@@ -937,7 +937,7 @@ bool Core::isTransactionValidForPool(const CachedTransaction& cachedTransaction,
     return false;
   }
 
-  auto maxTransactionSize = getMaximumTransactionAllowedSize(blockMedianSize, currency);
+  auto maxTransactionSize = TRITON_TRANSACTION_SIZE_LIMIT;
   if (cachedTransaction.getTransactionBinaryArray().size() > maxTransactionSize) {
     logger(Logging::WARNING) << "Transaction " << cachedTransaction.getTransactionHash()
       << " is not valid. Reason: transaction is too big (" << cachedTransaction.getTransactionBinaryArray().size()

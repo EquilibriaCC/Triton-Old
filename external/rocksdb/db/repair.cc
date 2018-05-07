@@ -1,7 +1,7 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -68,21 +68,21 @@
 #include "db/builder.h"
 #include "db/db_impl.h"
 #include "db/dbformat.h"
+#include "db/filename.h"
 #include "db/log_reader.h"
 #include "db/log_writer.h"
 #include "db/memtable.h"
 #include "db/table_cache.h"
 #include "db/version_edit.h"
 #include "db/write_batch_internal.h"
-#include "options/cf_options.h"
 #include "rocksdb/comparator.h"
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
+#include "rocksdb/immutable_options.h"
 #include "rocksdb/options.h"
 #include "rocksdb/write_buffer_manager.h"
 #include "table/scoped_arena_iterator.h"
 #include "util/file_reader_writer.h"
-#include "util/filename.h"
 #include "util/string_util.h"
 
 namespace rocksdb {
@@ -99,11 +99,10 @@ class Repairer {
         env_(db_options.env),
         env_options_(),
         db_options_(SanitizeOptions(dbname_, db_options)),
-        immutable_db_options_(db_options_),
         icmp_(default_cf_opts.comparator),
         default_cf_opts_(default_cf_opts),
         default_cf_iopts_(
-            ImmutableCFOptions(immutable_db_options_, default_cf_opts)),
+            ImmutableCFOptions(Options(db_options_, default_cf_opts))),
         unknown_cf_opts_(unknown_cf_opts),
         create_unknown_cfs_(create_unknown_cfs),
         raw_table_cache_(
@@ -114,8 +113,8 @@ class Repairer {
                                     raw_table_cache_.get())),
         wb_(db_options_.db_write_buffer_size),
         wc_(db_options_.delayed_write_rate),
-        vset_(dbname_, &immutable_db_options_, env_options_,
-              raw_table_cache_.get(), &wb_, &wc_),
+        vset_(dbname_, &db_options_, env_options_, raw_table_cache_.get(), &wb_,
+              &wc_),
         next_file_number_(1) {
     for (const auto& cfd : column_families) {
       cf_name_to_opts_[cfd.name] = cfd.options;
@@ -142,7 +141,7 @@ class Repairer {
                                 cf_name + ", id=" + ToString(cf_id));
     }
     Options opts(db_options_, *cf_opts);
-    MutableCFOptions mut_cf_opts(opts);
+    MutableCFOptions mut_cf_opts(opts, ImmutableCFOptions(opts));
 
     VersionEdit edit;
     edit.SetComparatorName(opts.comparator->Name());
@@ -199,13 +198,13 @@ class Repairer {
       for (size_t i = 0; i < tables_.size(); i++) {
         bytes += tables_[i].meta.fd.GetFileSize();
       }
-      ROCKS_LOG_WARN(db_options_.info_log,
-                     "**** Repaired rocksdb %s; "
-                     "recovered %" ROCKSDB_PRIszt " files; %" PRIu64
-                     "bytes. "
-                     "Some data may have been lost. "
-                     "****",
-                     dbname_.c_str(), tables_.size(), bytes);
+      Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
+          "**** Repaired rocksdb %s; "
+          "recovered %" ROCKSDB_PRIszt " files; %" PRIu64
+          "bytes. "
+          "Some data may have been lost. "
+          "****",
+          dbname_.c_str(), tables_.size(), bytes);
     }
     return status;
   }
@@ -223,7 +222,6 @@ class Repairer {
   Env* const env_;
   const EnvOptions env_options_;
   const DBOptions db_options_;
-  const ImmutableDBOptions immutable_db_options_;
   const InternalKeyComparator icmp_;
   const ColumnFamilyOptions default_cf_opts_;
   const ImmutableCFOptions default_cf_iopts_;  // table_cache_ holds reference
@@ -291,9 +289,9 @@ class Repairer {
       std::string logname = LogFileName(dbname_, logs_[i]);
       Status status = ConvertLogToTable(logs_[i]);
       if (!status.ok()) {
-        ROCKS_LOG_WARN(db_options_.info_log,
-                       "Log #%" PRIu64 ": ignoring conversion error: %s",
-                       logs_[i], status.ToString().c_str());
+        Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
+            "Log #%" PRIu64 ": ignoring conversion error: %s", logs_[i],
+            status.ToString().c_str());
       }
       ArchiveFile(logname);
     }
@@ -306,16 +304,16 @@ class Repairer {
       uint64_t lognum;
       virtual void Corruption(size_t bytes, const Status& s) override {
         // We print error messages for corruption, but continue repairing.
-        ROCKS_LOG_ERROR(info_log, "Log #%" PRIu64 ": dropping %d bytes; %s",
-                        lognum, static_cast<int>(bytes), s.ToString().c_str());
+        Log(InfoLogLevel::ERROR_LEVEL, info_log,
+            "Log #%" PRIu64 ": dropping %d bytes; %s", lognum,
+            static_cast<int>(bytes), s.ToString().c_str());
       }
     };
 
     // Open the log file
     std::string logname = LogFileName(dbname_, log);
     unique_ptr<SequentialFile> lfile;
-    Status status = env_->NewSequentialFile(
-        logname, &lfile, env_->OptimizeForLogRead(env_options_));
+    Status status = env_->NewSequentialFile(logname, &lfile, env_options_);
     if (!status.ok()) {
       return status;
     }
@@ -357,8 +355,8 @@ class Repairer {
       if (status.ok()) {
         counter += WriteBatchInternal::Count(&batch);
       } else {
-        ROCKS_LOG_WARN(db_options_.info_log, "Log #%" PRIu64 ": ignoring %s",
-                       log, status.ToString().c_str());
+        Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
+            "Log #%" PRIu64 ": ignoring %s", log, status.ToString().c_str());
         status = Status::OK();  // Keep going with rest of file
       }
     }
@@ -378,27 +376,16 @@ class Repairer {
       ro.total_order_seek = true;
       Arena arena;
       ScopedArenaIterator iter(mem->NewIterator(ro, &arena));
-      EnvOptions optimized_env_options =
-          env_->OptimizeForCompactionTableWrite(env_options_, immutable_db_options_);
-
-      int64_t _current_time = 0;
-      status = env_->GetCurrentTime(&_current_time);  // ignore error
-      const uint64_t current_time = static_cast<uint64_t>(_current_time);
-
       status = BuildTable(
           dbname_, env_, *cfd->ioptions(), *cfd->GetLatestMutableCFOptions(),
-          optimized_env_options, table_cache_, iter.get(),
-          std::unique_ptr<InternalIterator>(mem->NewRangeTombstoneIterator(ro)),
-          &meta, cfd->internal_comparator(),
-          cfd->int_tbl_prop_collector_factories(), cfd->GetID(), cfd->GetName(),
-          {}, kMaxSequenceNumber, kNoCompression, CompressionOptions(), false,
-          nullptr /* internal_stats */, TableFileCreationReason::kRecovery,
-          nullptr /* event_logger */, 0 /* job_id */, Env::IO_HIGH,
-          nullptr /* table_properties */, -1 /* level */, current_time);
-      ROCKS_LOG_INFO(db_options_.info_log,
-                     "Log #%" PRIu64 ": %d ops saved to Table #%" PRIu64 " %s",
-                     log, counter, meta.fd.GetNumber(),
-                     status.ToString().c_str());
+          env_options_, table_cache_, iter.get(), &meta,
+          cfd->internal_comparator(), cfd->int_tbl_prop_collector_factories(),
+          cfd->GetID(), cfd->GetName(), {}, kMaxSequenceNumber, kNoCompression,
+          CompressionOptions(), false, nullptr /* internal_stats */,
+          TableFileCreationReason::kRecovery);
+      Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
+          "Log #%" PRIu64 ": %d ops saved to Table #%" PRIu64 " %s", log,
+          counter, meta.fd.GetNumber(), status.ToString().c_str());
       if (status.ok()) {
         if (meta.fd.GetFileSize() > 0) {
           table_fds_.push_back(meta.fd);
@@ -422,8 +409,8 @@ class Repairer {
         char file_num_buf[kFormatFileNumberBufSize];
         FormatFileNumber(t.meta.fd.GetNumber(), t.meta.fd.GetPathId(),
                          file_num_buf, sizeof(file_num_buf));
-        ROCKS_LOG_WARN(db_options_.info_log, "Table #%s: ignoring %s",
-                       file_num_buf, status.ToString().c_str());
+        Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
+            "Table #%s: ignoring %s", file_num_buf, status.ToString().c_str());
         ArchiveFile(fname);
       } else {
         tables_.push_back(t);
@@ -448,8 +435,7 @@ class Repairer {
       t->column_family_id = static_cast<uint32_t>(props->column_family_id);
       if (t->column_family_id ==
           TablePropertiesCollectorFactory::Context::kUnknownColumnFamily) {
-        ROCKS_LOG_WARN(
-            db_options_.info_log,
+        Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
             "Table #%" PRIu64
             ": column family unknown (probably due to legacy format); "
             "adding to default column family id 0.",
@@ -467,8 +453,7 @@ class Repairer {
     if (status.ok()) {
       cfd = vset_.GetColumnFamilySet()->GetColumnFamily(t->column_family_id);
       if (cfd->GetName() != props->column_family_name) {
-        ROCKS_LOG_ERROR(
-            db_options_.info_log,
+        Log(InfoLogLevel::ERROR_LEVEL, db_options_.info_log,
             "Table #%" PRIu64
             ": inconsistent column family name '%s'; expected '%s' for column "
             "family id %" PRIu32 ".",
@@ -479,8 +464,7 @@ class Repairer {
     }
     if (status.ok()) {
       InternalIterator* iter = table_cache_->NewIterator(
-          ReadOptions(), env_options_, cfd->internal_comparator(), t->meta.fd,
-          nullptr /* range_del_agg */);
+          ReadOptions(), env_options_, cfd->internal_comparator(), t->meta.fd);
       bool empty = true;
       ParsedInternalKey parsed;
       t->min_sequence = 0;
@@ -488,9 +472,9 @@ class Repairer {
       for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         Slice key = iter->key();
         if (!ParseInternalKey(key, &parsed)) {
-          ROCKS_LOG_ERROR(db_options_.info_log,
-                          "Table #%" PRIu64 ": unparsable key %s",
-                          t->meta.fd.GetNumber(), EscapeString(key).c_str());
+          Log(InfoLogLevel::ERROR_LEVEL, db_options_.info_log,
+              "Table #%" PRIu64 ": unparsable key %s", t->meta.fd.GetNumber(),
+              EscapeString(key).c_str());
           continue;
         }
 
@@ -498,7 +482,6 @@ class Repairer {
         if (empty) {
           empty = false;
           t->meta.smallest.DecodeFrom(key);
-          t->min_sequence = parsed.sequence;
         }
         t->meta.largest.DecodeFrom(key);
         if (parsed.sequence < t->min_sequence) {
@@ -513,9 +496,9 @@ class Repairer {
       }
       delete iter;
 
-      ROCKS_LOG_INFO(db_options_.info_log, "Table #%" PRIu64 ": %d entries %s",
-                     t->meta.fd.GetNumber(), counter,
-                     status.ToString().c_str());
+      Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
+          "Table #%" PRIu64 ": %d entries %s", t->meta.fd.GetNumber(), counter,
+          status.ToString().c_str());
     }
     return status;
   }
@@ -529,7 +512,6 @@ class Repairer {
         max_sequence = tables_[i].max_sequence;
       }
     }
-    vset_.SetLastToBeWrittenSequence(max_sequence);
     vset_.SetLastSequence(max_sequence);
 
     for (const auto& cf_id_and_tables : cf_id_to_tables) {
@@ -576,8 +558,8 @@ class Repairer {
     new_file.append("/");
     new_file.append((slash == nullptr) ? fname.c_str() : slash + 1);
     Status s = env_->RenameFile(fname, new_file);
-    ROCKS_LOG_INFO(db_options_.info_log, "Archiving %s: %s\n", fname.c_str(),
-                   s.ToString().c_str());
+    Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log, "Archiving %s: %s\n",
+        fname.c_str(), s.ToString().c_str());
   }
 };
 

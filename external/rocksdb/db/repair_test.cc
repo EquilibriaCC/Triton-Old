@@ -1,9 +1,7 @@
 //  Copyright (c) 2016-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
-
-#ifndef ROCKSDB_LITE
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 
 #include <algorithm>
 #include <string>
@@ -19,7 +17,6 @@
 
 namespace rocksdb {
 
-#ifndef ROCKSDB_LITE
 class RepairTest : public DBTestBase {
  public:
   RepairTest() : DBTestBase("/repair_test") {}
@@ -256,10 +253,7 @@ TEST_F(RepairTest, RepairColumnFamilyOptions) {
   db_->GetPropertiesOfAllTables(handles_[1], &fname_to_props);
   ASSERT_EQ(fname_to_props.size(), 2U);
   for (const auto& fname_and_props : fname_to_props) {
-    std::string comparator_name (
-      InternalKeyComparator(rev_opts.comparator).Name());
-    comparator_name = comparator_name.substr(comparator_name.find(':') + 1);
-    ASSERT_EQ(comparator_name,
+    ASSERT_EQ(InternalKeyComparator(rev_opts.comparator).Name(),
               fname_and_props.second->comparator_name);
   }
 
@@ -274,21 +268,9 @@ TEST_F(RepairTest, RepairColumnFamilyOptions) {
     }
   }
 }
-
-#endif  // ROCKSDB_LITE
 }  // namespace rocksdb
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-
-#else
-#include <stdio.h>
-
-int main(int argc, char** argv) {
-  fprintf(stderr, "SKIPPED as RepairDB is not supported in ROCKSDB_LITE\n");
-  return 0;
-}
-
-#endif  // ROCKSDB_LITE

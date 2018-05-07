@@ -1,21 +1,16 @@
 //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 #ifndef ROCKSDB_LITE
 
 #include "utilities/persistent_cache/block_cache_tier_file.h"
 
-#ifndef OS_WIN
 #include <unistd.h>
-#endif
-#include <functional>
 #include <memory>
 #include <vector>
 
-#include "port/port.h"
 #include "util/crc32c.h"
-#include "util/logging.h"
 
 namespace rocksdb {
 
@@ -194,25 +189,22 @@ bool CacheRecord::Deserialize(const Slice& data) {
 // RandomAccessFile
 //
 
-bool RandomAccessCacheFile::Open(const bool enable_direct_reads) {
+bool RandomAccessCacheFile::Open() {
   WriteLock _(&rwlock_);
-  return OpenImpl(enable_direct_reads);
+  return OpenImpl();
 }
 
-bool RandomAccessCacheFile::OpenImpl(const bool enable_direct_reads) {
+bool RandomAccessCacheFile::OpenImpl() {
   rwlock_.AssertHeld();
 
-  ROCKS_LOG_DEBUG(log_, "Opening cache file %s", Path().c_str());
+  Debug(log_, "Opening cache file %s", Path().c_str());
 
-  std::unique_ptr<RandomAccessFile> file;
-  Status status =
-      NewRandomAccessCacheFile(env_, Path(), &file, enable_direct_reads);
+  Status status = NewRandomAccessCacheFile(env_, Path(), &file_);
   if (!status.ok()) {
     Error(log_, "Error opening random access file %s. %s", Path().c_str(),
           status.ToString().c_str());
     return false;
   }
-  freader_.reset(new RandomAccessFileReader(std::move(file), Path(), env_));
 
   return true;
 }
@@ -222,13 +214,10 @@ bool RandomAccessCacheFile::Read(const LBA& lba, Slice* key, Slice* val,
   ReadLock _(&rwlock_);
 
   assert(lba.cache_id_ == cache_id_);
-
-  if (!freader_) {
-    return false;
-  }
+  assert(file_);
 
   Slice result;
-  Status s = freader_->Read(lba.off_, lba.size_, &result, scratch);
+  Status s = file_->Read(lba.off_, lba.size_, &result, scratch);
   if (!s.ok()) {
     Error(log_, "Error reading from file %s. %s", Path().c_str(),
           s.ToString().c_str());
@@ -268,34 +257,30 @@ WriteableCacheFile::~WriteableCacheFile() {
     // This file never flushed. We give priority to shutdown since this is a
     // cache
     // TODO(krad): Figure a way to flush the pending data
-    if (file_) {
-      assert(refs_ == 1);
-      --refs_;
-    }
+    assert(file_);
+
+    assert(refs_ == 1);
+    --refs_;
   }
-  assert(!refs_);
   ClearBuffers();
 }
 
-bool WriteableCacheFile::Create(const bool enable_direct_writes,
-                                const bool enable_direct_reads) {
+bool WriteableCacheFile::Create() {
   WriteLock _(&rwlock_);
 
-  enable_direct_reads_ = enable_direct_reads;
-
-  ROCKS_LOG_DEBUG(log_, "Creating new cache %s (max size is %d B)",
-                  Path().c_str(), max_size_);
+  Debug(log_, "Creating new cache %s (max size is %d B)", Path().c_str(),
+        max_size_);
 
   Status s = env_->FileExists(Path());
   if (s.ok()) {
-    ROCKS_LOG_WARN(log_, "File %s already exists. %s", Path().c_str(),
-                   s.ToString().c_str());
+    Warn(log_, "File %s already exists. %s", Path().c_str(),
+         s.ToString().c_str());
   }
 
   s = NewWritableCacheFile(env_, Path(), &file_);
   if (!s.ok()) {
-    ROCKS_LOG_WARN(log_, "Unable to create file %s. %s", Path().c_str(),
-                   s.ToString().c_str());
+    Warn(log_, "Unable to create file %s. %s", Path().c_str(),
+         s.ToString().c_str());
     return false;
   }
 
@@ -318,7 +303,7 @@ bool WriteableCacheFile::Append(const Slice& key, const Slice& val, LBA* lba) {
 
   if (!ExpandBuffer(rec_size)) {
     // unable to expand the buffer
-    ROCKS_LOG_DEBUG(log_, "Error expanding buffers. size=%d", rec_size);
+    Debug(log_, "Error expanding buffers. size=%d", rec_size);
     return false;
   }
 
@@ -361,11 +346,11 @@ bool WriteableCacheFile::ExpandBuffer(const size_t size) {
   while (free < size) {
     CacheWriteBuffer* const buf = alloc_->Allocate();
     if (!buf) {
-      ROCKS_LOG_DEBUG(log_, "Unable to allocate buffers");
+      Debug(log_, "Unable to allocate buffers");
       return false;
     }
 
-    size_ += static_cast<uint32_t>(buf->Free());
+    size_ += buf->Free();
     free += buf->Free();
     bufs_.push_back(buf);
   }
@@ -403,7 +388,7 @@ void WriteableCacheFile::DispatchBuffer() {
   // pad it with zero for direct IO
   buf->FillTrailingZeros();
 
-  assert(buf->Used() % kFileAlignmentSize == 0);
+  assert(buf->Used() % FILE_ALIGNMENT_SIZE == 0);
 
   writer_->Write(file_.get(), buf, file_off,
                  std::bind(&WriteableCacheFile::BufferWriteDone, this));
@@ -432,7 +417,7 @@ void WriteableCacheFile::CloseAndOpenForReading() {
   // Our env abstraction do not allow reading from a file opened for appending
   // We need close the file and re-open it for reading
   Close();
-  RandomAccessCacheFile::OpenImpl(enable_direct_reads_);
+  RandomAccessCacheFile::OpenImpl();
 }
 
 bool WriteableCacheFile::ReadBuffer(const LBA& lba, Slice* key, Slice* block,
@@ -524,7 +509,7 @@ ThreadedWriter::ThreadedWriter(PersistentCacheTier* const cache,
                                const size_t qdepth, const size_t io_size)
     : Writer(cache), io_size_(io_size) {
   for (size_t i = 0; i < qdepth; ++i) {
-    port::Thread th(&ThreadedWriter::ThreadMain, this);
+    std::thread th(&ThreadedWriter::ThreadMain, this);
     threads_.push_back(std::move(th));
   }
 }
@@ -538,9 +523,7 @@ void ThreadedWriter::Stop() {
   // wait for all threads to exit
   for (auto& th : threads_) {
     th.join();
-    assert(!th.joinable());
   }
-  threads_.clear();
 }
 
 void ThreadedWriter::Write(WritableFile* const file, CacheWriteBuffer* buf,
@@ -562,8 +545,7 @@ void ThreadedWriter::ThreadMain() {
     while (!cache_->Reserve(io.buf_->Used())) {
       // We can fail to reserve space if every file in the system
       // is being currently accessed
-      /* sleep override */
-      Env::Default()->SleepForMicroseconds(1000000);
+      /* sleep override */ sleep(1);
     }
 
     DispatchIO(io);

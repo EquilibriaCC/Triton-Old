@@ -1,7 +1,7 @@
 // Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree. An additional grant
+// of patent rights can be found in the PATENTS file in the same directory.
 
 #pragma once
 
@@ -39,8 +39,7 @@ class TransactionBaseImpl : public Transaction {
   // untracked will be true if called from PutUntracked, DeleteUntracked, or
   // MergeUntracked.
   virtual Status TryLock(ColumnFamilyHandle* column_family, const Slice& key,
-                         bool read_only, bool exclusive,
-                         bool untracked = false) = 0;
+                         bool read_only, bool untracked = false) = 0;
 
   void SetSavePoint() override;
 
@@ -56,12 +55,11 @@ class TransactionBaseImpl : public Transaction {
 
   Status GetForUpdate(const ReadOptions& options,
                       ColumnFamilyHandle* column_family, const Slice& key,
-                      std::string* value, bool exclusive) override;
+                      std::string* value) override;
 
   Status GetForUpdate(const ReadOptions& options, const Slice& key,
-                      std::string* value, bool exclusive) override {
-    return GetForUpdate(options, db_->DefaultColumnFamily(), key, value,
-                        exclusive);
+                      std::string* value) override {
+    return GetForUpdate(options, db_->DefaultColumnFamily(), key, value);
   }
 
   std::vector<Status> MultiGet(
@@ -227,12 +225,12 @@ class TransactionBaseImpl : public Transaction {
   // seqno is the earliest seqno this key was involved with this transaction.
   // readonly should be set to true if no data was written for this key
   void TrackKey(uint32_t cfh_id, const std::string& key, SequenceNumber seqno,
-                bool readonly, bool exclusive);
+                bool readonly);
 
   // Helper function to add a key to the given TransactionKeyMap
   static void TrackKey(TransactionKeyMap* key_map, uint32_t cfh_id,
                        const std::string& key, SequenceNumber seqno,
-                       bool readonly, bool exclusive);
+                       bool readonly);
 
   // Called when UndoGetForUpdate determines that this key can be unlocked.
   virtual void UnlockGetForUpdate(ColumnFamilyHandle* column_family,
@@ -284,10 +282,10 @@ class TransactionBaseImpl : public Transaction {
           num_merges_(num_merges) {}
   };
 
+ private:
   // Records writes pending in this transaction
   WriteBatchWithIndex write_batch_;
 
- private:
   // batch to be written at commit time
   WriteBatch commit_time_batch_;
 
@@ -317,7 +315,7 @@ class TransactionBaseImpl : public Transaction {
   std::shared_ptr<TransactionNotifier> snapshot_notifier_ = nullptr;
 
   Status TryLock(ColumnFamilyHandle* column_family, const SliceParts& key,
-                 bool read_only, bool exclusive, bool untracked = false);
+                 bool read_only, bool untracked = false);
 
   WriteBatchBase* GetBatchForWrite();
 

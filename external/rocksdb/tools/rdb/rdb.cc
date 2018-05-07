@@ -2,9 +2,9 @@
 #define BUILDING_NODE_EXTENSION
 #endif
 
-#include <node.h>
 #include <v8.h>
-#include "db/_wrapper.h"
+#include <node.h>
+#include "db_wrapper.h"
 
 using namespace v8;
 

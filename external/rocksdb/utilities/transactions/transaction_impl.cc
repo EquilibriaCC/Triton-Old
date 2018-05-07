@@ -1,7 +1,7 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 
 #ifndef ROCKSDB_LITE
 
@@ -37,30 +37,24 @@ TransactionID TransactionImpl::GenTxnID() {
 TransactionImpl::TransactionImpl(TransactionDB* txn_db,
                                  const WriteOptions& write_options,
                                  const TransactionOptions& txn_options)
-    : TransactionBaseImpl(txn_db->GetRootDB(), write_options),
+    : TransactionBaseImpl(txn_db->GetBaseDB(), write_options),
       txn_db_impl_(nullptr),
       txn_id_(0),
-      waiting_cf_id_(0),
-      waiting_key_(nullptr),
       expiration_time_(0),
-      lock_timeout_(0),
-      deadlock_detect_(false),
-      deadlock_detect_depth_(0) {
+      lock_timeout_(0) {
   txn_db_impl_ = dynamic_cast<TransactionDBImpl*>(txn_db);
   assert(txn_db_impl_);
-  db_impl_ = dynamic_cast<DBImpl*>(txn_db->GetRootDB());
+
+  db_impl_ = dynamic_cast<DBImpl*>(txn_db->GetBaseDB());
   assert(db_impl_);
+
   Initialize(txn_options);
 }
 
 void TransactionImpl::Initialize(const TransactionOptions& txn_options) {
   txn_id_ = GenTxnID();
 
-  txn_state_ = STARTED;
-
-  deadlock_detect_ = txn_options.deadlock_detect;
-  deadlock_detect_depth_ = txn_options.deadlock_detect_depth;
-  write_batch_.SetMaxBytes(txn_options.max_write_batch_size);
+  exec_status_ = STARTED;
 
   lock_timeout_ = txn_options.lock_timeout * 1000;
   if (lock_timeout_ < 0) {
@@ -89,7 +83,7 @@ TransactionImpl::~TransactionImpl() {
   if (expiration_time_ > 0) {
     txn_db_impl_->RemoveExpirableTransaction(txn_id_);
   }
-  if (!name_.empty() && txn_state_ != COMMITED) {
+  if (!name_.empty() && exec_status_ != COMMITED) {
     txn_db_impl_->UnregisterTransaction(this);
   }
 }
@@ -102,10 +96,10 @@ void TransactionImpl::Clear() {
 void TransactionImpl::Reinitialize(TransactionDB* txn_db,
                                    const WriteOptions& write_options,
                                    const TransactionOptions& txn_options) {
-  if (!name_.empty() && txn_state_ != COMMITED) {
+  if (!name_.empty() && exec_status_ != COMMITED) {
     txn_db_impl_->UnregisterTransaction(this);
   }
-  TransactionBaseImpl::Reinitialize(txn_db->GetRootDB(), write_options);
+  TransactionBaseImpl::Reinitialize(txn_db->GetBaseDB(), write_options);
   Initialize(txn_options);
 }
 
@@ -133,21 +127,21 @@ Status TransactionImpl::CommitBatch(WriteBatch* batch) {
   if (IsExpired()) {
     s = Status::Expired();
   } else if (expiration_time_ > 0) {
-    TransactionState expected = STARTED;
-    can_commit = std::atomic_compare_exchange_strong(&txn_state_, &expected,
+    ExecutionStatus expected = STARTED;
+    can_commit = std::atomic_compare_exchange_strong(&exec_status_, &expected,
                                                      AWAITING_COMMIT);
-  } else if (txn_state_ == STARTED) {
+  } else if (exec_status_ == STARTED) {
     // lock stealing is not a concern
     can_commit = true;
   }
 
   if (can_commit) {
-    txn_state_.store(AWAITING_COMMIT);
+    exec_status_.store(AWAITING_COMMIT);
     s = db_->Write(write_options_, batch);
     if (s.ok()) {
-      txn_state_.store(COMMITED);
+      exec_status_.store(COMMITED);
     }
-  } else if (txn_state_ == LOCKS_STOLEN) {
+  } else if (exec_status_ == LOCKS_STOLEN) {
     s = Status::Expired();
   } else {
     s = Status::InvalidArgument("Transaction is not in state for commit.");
@@ -175,16 +169,16 @@ Status TransactionImpl::Prepare() {
   if (expiration_time_ > 0) {
     // must concern ourselves with expiraton and/or lock stealing
     // need to compare/exchange bc locks could be stolen under us here
-    TransactionState expected = STARTED;
-    can_prepare = std::atomic_compare_exchange_strong(&txn_state_, &expected,
+    ExecutionStatus expected = STARTED;
+    can_prepare = std::atomic_compare_exchange_strong(&exec_status_, &expected,
                                                       AWAITING_PREPARE);
-  } else if (txn_state_ == STARTED) {
+  } else if (exec_status_ == STARTED) {
     // expiration and lock stealing is not possible
     can_prepare = true;
   }
 
   if (can_prepare) {
-    txn_state_.store(AWAITING_PREPARE);
+    exec_status_.store(AWAITING_PREPARE);
     // transaction can't expire after preparation
     expiration_time_ = 0;
     WriteOptions write_options = write_options_;
@@ -196,15 +190,15 @@ Status TransactionImpl::Prepare() {
     if (s.ok()) {
       assert(log_number_ != 0);
       dbimpl_->MarkLogAsContainingPrepSection(log_number_);
-      txn_state_.store(PREPARED);
+      exec_status_.store(PREPARED);
     }
-  } else if (txn_state_ == LOCKS_STOLEN) {
+  } else if (exec_status_ == LOCKS_STOLEN) {
     s = Status::Expired();
-  } else if (txn_state_ == PREPARED) {
+  } else if (exec_status_ == PREPARED) {
     s = Status::InvalidArgument("Transaction has already been prepared.");
-  } else if (txn_state_ == COMMITED) {
+  } else if (exec_status_ == COMMITED) {
     s = Status::InvalidArgument("Transaction has already been committed.");
-  } else if (txn_state_ == ROLLEDBACK) {
+  } else if (exec_status_ == ROLLEDBACK) {
     s = Status::InvalidArgument("Transaction has already been rolledback.");
   } else {
     s = Status::InvalidArgument("Transaction is not in state for commit.");
@@ -228,14 +222,14 @@ Status TransactionImpl::Commit() {
     // to change our state out from under us in the even that we expire and have
     // our locks stolen. In this case the only valid state is STARTED because
     // a state of PREPARED would have a cleared expiration_time_.
-    TransactionState expected = STARTED;
-    commit_single = std::atomic_compare_exchange_strong(&txn_state_, &expected,
-                                                        AWAITING_COMMIT);
+    ExecutionStatus expected = STARTED;
+    commit_single = std::atomic_compare_exchange_strong(
+        &exec_status_, &expected, AWAITING_COMMIT);
     TEST_SYNC_POINT("TransactionTest::ExpirableTransactionDataRace:1");
-  } else if (txn_state_ == PREPARED) {
+  } else if (exec_status_ == PREPARED) {
     // expiration and lock stealing is not a concern
     commit_prepared = true;
-  } else if (txn_state_ == STARTED) {
+  } else if (exec_status_ == STARTED) {
     // expiration and lock stealing is not a concern
     commit_single = true;
   }
@@ -246,34 +240,35 @@ Status TransactionImpl::Commit() {
       s = Status::InvalidArgument(
           "Commit-time batch contains values that will not be committed.");
     } else {
-      txn_state_.store(AWAITING_COMMIT);
+      exec_status_.store(AWAITING_COMMIT);
       s = db_->Write(write_options_, GetWriteBatch()->GetWriteBatch());
       Clear();
       if (s.ok()) {
-        txn_state_.store(COMMITED);
+        exec_status_.store(COMMITED);
       }
     }
   } else if (commit_prepared) {
-    txn_state_.store(AWAITING_COMMIT);
+    exec_status_.store(AWAITING_COMMIT);
+    WriteOptions write_options = write_options_;
 
-    // We take the commit-time batch and append the Commit marker.
-    // The Memtable will ignore the Commit marker in non-recovery mode
-    WriteBatch* working_batch = GetCommitTimeWriteBatch();
-    WriteBatchInternal::MarkCommit(working_batch, name_);
-
-    // any operations appended to this working_batch will be ignored from WAL
-    working_batch->MarkWalTerminationPoint();
-
-    // insert prepared batch into Memtable only skipping WAL.
+    // insert prepared batch into Memtable only.
     // Memtable will ignore BeginPrepare/EndPrepare markers
     // in non recovery mode and simply insert the values
-    WriteBatchInternal::Append(working_batch, GetWriteBatch()->GetWriteBatch());
-
-    s = db_impl_->WriteImpl(write_options_, working_batch, nullptr, nullptr,
-                            log_number_);
+    write_options.disableWAL = true;
+    assert(log_number_ > 0);
+    s = db_impl_->WriteImpl(write_options, GetWriteBatch()->GetWriteBatch(),
+                            nullptr, nullptr, log_number_);
     if (!s.ok()) {
-      ROCKS_LOG_WARN(db_impl_->immutable_db_options().info_log,
-                     "Commit write failed");
+      return s;
+    }
+
+    // We take the commit-time batch and append the Commit marker.
+    // We then write this batch to both WAL and Memtable.
+    // The Memtable will ignore the Commit marker in non-recovery mode
+    write_options.disableWAL = false;
+    WriteBatchInternal::MarkCommit(GetCommitTimeWriteBatch(), name_);
+    s = db_impl_->WriteImpl(write_options, GetCommitTimeWriteBatch());
+    if (!s.ok()) {
       return s;
     }
 
@@ -285,12 +280,12 @@ Status TransactionImpl::Commit() {
     txn_db_impl_->UnregisterTransaction(this);
 
     Clear();
-    txn_state_.store(COMMITED);
-  } else if (txn_state_ == LOCKS_STOLEN) {
+    exec_status_.store(COMMITED);
+  } else if (exec_status_ == LOCKS_STOLEN) {
     s = Status::Expired();
-  } else if (txn_state_ == COMMITED) {
+  } else if (exec_status_ == COMMITED) {
     s = Status::InvalidArgument("Transaction has already been committed.");
-  } else if (txn_state_ == ROLLEDBACK) {
+  } else if (exec_status_ == ROLLEDBACK) {
     s = Status::InvalidArgument("Transaction has already been rolledback.");
   } else {
     s = Status::InvalidArgument("Transaction is not in state for commit.");
@@ -301,22 +296,22 @@ Status TransactionImpl::Commit() {
 
 Status TransactionImpl::Rollback() {
   Status s;
-  if (txn_state_ == PREPARED) {
+  if (exec_status_ == PREPARED) {
     WriteBatch rollback_marker;
     WriteBatchInternal::MarkRollback(&rollback_marker, name_);
-    txn_state_.store(AWAITING_ROLLBACK);
+    exec_status_.store(AWAITING_ROLLBACK);
     s = db_impl_->WriteImpl(write_options_, &rollback_marker);
     if (s.ok()) {
       // we do not need to keep our prepared section around
       assert(log_number_ > 0);
       dbimpl_->MarkLogAsHavingPrepSectionFlushed(log_number_);
       Clear();
-      txn_state_.store(ROLLEDBACK);
+      exec_status_.store(ROLLEDBACK);
     }
-  } else if (txn_state_ == STARTED) {
+  } else if (exec_status_ == STARTED) {
     // prepare couldn't have taken place
     Clear();
-  } else if (txn_state_ == COMMITED) {
+  } else if (exec_status_ == COMMITED) {
     s = Status::InvalidArgument("This transaction has already been committed.");
   } else {
     s = Status::InvalidArgument(
@@ -327,7 +322,7 @@ Status TransactionImpl::Rollback() {
 }
 
 Status TransactionImpl::RollbackToSavePoint() {
-  if (txn_state_ != STARTED) {
+  if (exec_status_ != STARTED) {
     return Status::InvalidArgument("Transaction is beyond state for rollback.");
   }
 
@@ -397,12 +392,12 @@ Status TransactionImpl::LockBatch(WriteBatch* batch,
     for (const auto& key_iter : cfh_keys) {
       const std::string& key = key_iter;
 
-      s = txn_db_impl_->TryLock(this, cfh_id, key, true /* exclusive */);
+      s = txn_db_impl_->TryLock(this, cfh_id, key);
       if (!s.ok()) {
         break;
       }
       TrackKey(keys_to_unlock, cfh_id, std::move(key), kMaxSequenceNumber,
-               false, true /* exclusive */);
+               false);
     }
 
     if (!s.ok()) {
@@ -424,11 +419,10 @@ Status TransactionImpl::LockBatch(WriteBatch* batch,
 // the snapshot time.
 Status TransactionImpl::TryLock(ColumnFamilyHandle* column_family,
                                 const Slice& key, bool read_only,
-                                bool exclusive, bool untracked) {
+                                bool untracked) {
   uint32_t cfh_id = GetColumnFamilyID(column_family);
   std::string key_str = key.ToString();
   bool previously_locked;
-  bool lock_upgrade = false;
   Status s;
 
   // lock this key if this transactions hasn't already locked it
@@ -444,18 +438,14 @@ Status TransactionImpl::TryLock(ColumnFamilyHandle* column_family,
     if (iter == tracked_keys_cf->second.end()) {
       previously_locked = false;
     } else {
-      if (!iter->second.exclusive && exclusive) {
-        lock_upgrade = true;
-      }
       previously_locked = true;
       current_seqno = iter->second.seq;
     }
   }
 
-  // Lock this key if this transactions hasn't already locked it or we require
-  // an upgrade.
-  if (!previously_locked || lock_upgrade) {
-    s = txn_db_impl_->TryLock(this, cfh_id, key_str, exclusive);
+  // lock this key if this transactions hasn't already locked it
+  if (!previously_locked) {
+    s = txn_db_impl_->TryLock(this, cfh_id, key_str);
   }
 
   SetSnapshotIfNeeded();
@@ -488,13 +478,7 @@ Status TransactionImpl::TryLock(ColumnFamilyHandle* column_family,
         // Failed to validate key
         if (!previously_locked) {
           // Unlock key we just locked
-          if (lock_upgrade) {
-            s = txn_db_impl_->TryLock(this, cfh_id, key_str,
-                                      false /* exclusive */);
-            assert(s.ok());
-          } else {
-            txn_db_impl_->UnLock(this, cfh_id, key.ToString());
-          }
+          txn_db_impl_->UnLock(this, cfh_id, key.ToString());
         }
       }
     }
@@ -502,7 +486,7 @@ Status TransactionImpl::TryLock(ColumnFamilyHandle* column_family,
 
   if (s.ok()) {
     // Let base class know we've conflict checked this key.
-    TrackKey(cfh_id, key_str, new_seqno, read_only, exclusive);
+    TrackKey(cfh_id, key_str, new_seqno, read_only);
   }
 
   return s;
@@ -539,8 +523,8 @@ Status TransactionImpl::ValidateSnapshot(ColumnFamilyHandle* column_family,
 
 bool TransactionImpl::TryStealingLocks() {
   assert(IsExpired());
-  TransactionState expected = STARTED;
-  return std::atomic_compare_exchange_strong(&txn_state_, &expected,
+  ExecutionStatus expected = STARTED;
+  return std::atomic_compare_exchange_strong(&exec_status_, &expected,
                                              LOCKS_STOLEN);
 }
 
@@ -551,7 +535,7 @@ void TransactionImpl::UnlockGetForUpdate(ColumnFamilyHandle* column_family,
 
 Status TransactionImpl::SetName(const TransactionName& name) {
   Status s;
-  if (txn_state_ == STARTED) {
+  if (exec_status_ == STARTED) {
     if (name_.length()) {
       s = Status::InvalidArgument("Transaction has already been named.");
     } else if (txn_db_impl_->GetTransactionByName(name) != nullptr) {

@@ -1,21 +1,20 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
-#pragma once
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 
 #ifndef ROCKSDB_LITE
+#pragma once
 #include <vector>
 
-#include "db/log_reader.h"
-#include "db/version_set.h"
-#include "options/db_options.h"
-#include "port/port.h"
 #include "rocksdb/env.h"
 #include "rocksdb/options.h"
-#include "rocksdb/transaction_log.h"
 #include "rocksdb/types.h"
-#include "util/filename.h"
+#include "rocksdb/transaction_log.h"
+#include "db/version_set.h"
+#include "db/log_reader.h"
+#include "db/filename.h"
+#include "port/port.h"
 
 namespace rocksdb {
 
@@ -59,7 +58,7 @@ class LogFileImpl : public LogFile {
 class TransactionLogIteratorImpl : public TransactionLogIterator {
  public:
   TransactionLogIteratorImpl(
-      const std::string& dir, const ImmutableDBOptions* options,
+      const std::string& dir, const DBOptions* options,
       const TransactionLogIterator::ReadOptions& read_options,
       const EnvOptions& soptions, const SequenceNumber seqNum,
       std::unique_ptr<VectorLogPtr> files, VersionSet const* const versions);
@@ -74,7 +73,7 @@ class TransactionLogIteratorImpl : public TransactionLogIterator {
 
  private:
   const std::string& dir_;
-  const ImmutableDBOptions* options_;
+  const DBOptions* options_;
   const TransactionLogIterator::ReadOptions read_options_;
   const EnvOptions& soptions_;
   SequenceNumber startingSequenceNumber_;
@@ -92,10 +91,13 @@ class TransactionLogIteratorImpl : public TransactionLogIterator {
     Env* env;
     Logger* info_log;
     virtual void Corruption(size_t bytes, const Status& s) override {
-      ROCKS_LOG_ERROR(info_log, "dropping %" ROCKSDB_PRIszt " bytes; %s", bytes,
-                      s.ToString().c_str());
+      Log(InfoLogLevel::ERROR_LEVEL, info_log,
+          "dropping %" ROCKSDB_PRIszt " bytes; %s", bytes,
+          s.ToString().c_str());
     }
-    virtual void Info(const char* s) { ROCKS_LOG_INFO(info_log, "%s", s); }
+    virtual void Info(const char* s) {
+      Log(InfoLogLevel::INFO_LEVEL, info_log, "%s", s);
+    }
   } reporter_;
 
   SequenceNumber currentBatchSeq_; // sequence number at start of current batch

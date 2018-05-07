@@ -1,7 +1,7 @@
 // Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree. An additional grant
+// of patent rights can be found in the PATENTS file in the same directory.
 /**
  * Copyright (C) 2011 the original author or authors.
  * See the notice.md file distributed with this work for additional
@@ -545,6 +545,8 @@ public class DbBenchmark {
         (Integer)flags_.get(Flag.max_background_flushes));
     options.setMaxOpenFiles(
         (Integer)flags_.get(Flag.open_files));
+    options.setDisableDataSync(
+        (Boolean)flags_.get(Flag.disable_data_sync));
     options.setUseFsync(
         (Boolean)flags_.get(Flag.use_fsync));
     options.setWalDir(
@@ -572,20 +574,30 @@ public class DbBenchmark {
         (Integer)flags_.get(Flag.num_levels));
     options.setTargetFileSizeBase(
         (Integer)flags_.get(Flag.target_file_size_base));
-    options.setTargetFileSizeMultiplier((Integer)flags_.get(Flag.target_file_size_multiplier));
+    options.setTargetFileSizeMultiplier(
+        (Integer)flags_.get(Flag.target_file_size_multiplier));
     options.setMaxBytesForLevelBase(
         (Integer)flags_.get(Flag.max_bytes_for_level_base));
-    options.setMaxBytesForLevelMultiplier((Double) flags_.get(Flag.max_bytes_for_level_multiplier));
+    options.setMaxBytesForLevelMultiplier(
+        (Integer)flags_.get(Flag.max_bytes_for_level_multiplier));
     options.setLevelZeroStopWritesTrigger(
         (Integer)flags_.get(Flag.level0_stop_writes_trigger));
     options.setLevelZeroSlowdownWritesTrigger(
         (Integer)flags_.get(Flag.level0_slowdown_writes_trigger));
     options.setLevelZeroFileNumCompactionTrigger(
         (Integer)flags_.get(Flag.level0_file_num_compaction_trigger));
-    options.setMaxCompactionBytes(
-        (Long) flags_.get(Flag.max_compaction_bytes));
+    options.setSoftRateLimit(
+        (Double)flags_.get(Flag.soft_rate_limit));
+    options.setHardRateLimit(
+        (Double)flags_.get(Flag.hard_rate_limit));
+    options.setRateLimitDelayMaxMilliseconds(
+        (Integer)flags_.get(Flag.rate_limit_delay_max_milliseconds));
+    options.setMaxGrandparentOverlapFactor(
+        (Integer)flags_.get(Flag.max_grandparent_overlap_factor));
     options.setDisableAutoCompactions(
         (Boolean)flags_.get(Flag.disable_auto_compactions));
+    options.setSourceCompactionFactor(
+        (Integer)flags_.get(Flag.source_compaction_factor));
     options.setMaxSuccessiveMerges(
         (Integer)flags_.get(Flag.max_successive_merges));
     options.setWalTtlSeconds((Long)flags_.get(Flag.wal_ttl_seconds));
@@ -970,7 +982,7 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    write_buffer_size(4L * SizeUnit.MB,
+    write_buffer_size(4 * SizeUnit.MB,
         "Number of bytes to buffer in memtable before compacting\n" +
         "\t(initialized to default value by 'main'.)") {
       @Override public Object parseValue(String value) {
@@ -1048,7 +1060,7 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    numdistinct(1000L,
+    numdistinct(1000,
         "Number of distinct keys to use. Used in RandomWithVerify to\n" +
         "\tread/write on fewer keys so that gets are more likely to find the\n" +
         "\tkey and puts are more likely to update the same key.") {
@@ -1056,7 +1068,7 @@ public class DbBenchmark {
         return Long.parseLong(value);
       }
     },
-    merge_keys(-1L,
+    merge_keys(-1,
         "Number of distinct keys to use for MergeRandom and\n" +
         "\tReadRandomMergeRandom.\n" +
         "\tIf negative, there will be FLAGS_num keys.") {
@@ -1161,7 +1173,7 @@ public class DbBenchmark {
         return Long.parseLong(value);
       }
     },
-    compressed_cache_size(-1L,
+    compressed_cache_size(-1,
         "Number of bytes to use as a cache of compressed data.") {
       @Override public Object parseValue(String value) {
         return Long.parseLong(value);
@@ -1180,7 +1192,7 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    memtable_bloom_size_ratio(0.0d, "Ratio of memtable used by the bloom filter.\n"
+    memtable_bloom_size_ratio(0, "Ratio of memtable used by the bloom filter.\n"
             + "\t0 means no bloom filter.") {
       @Override public Object parseValue(String value) {
         return Double.parseDouble(value);
@@ -1204,13 +1216,19 @@ public class DbBenchmark {
         return parseBoolean(value);
       }
     },
-    writes(-1L, "Number of write operations to do. If negative, do\n" +
+    writes(-1,"Number of write operations to do. If negative, do\n" +
         "\t--num reads.") {
       @Override public Object parseValue(String value) {
         return Long.parseLong(value);
       }
     },
     sync(false,"Sync all writes to disk.") {
+      @Override public Object parseValue(String value) {
+        return parseBoolean(value);
+      }
+    },
+    disable_data_sync(false,"If true, do not wait until data is\n" +
+        "\tsynced to disk.") {
       @Override public Object parseValue(String value) {
         return parseBoolean(value);
       }
@@ -1247,10 +1265,10 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    max_bytes_for_level_multiplier(10.0d,
+    max_bytes_for_level_multiplier(10,
         "A multiplier to compute max bytes for level-N (N >= 2)") {
       @Override public Object parseValue(String value) {
-        return Double.parseDouble(value);
+        return Integer.parseInt(value);
       }
     },
     level0_stop_writes_trigger(12,"Number of files in level-0\n" +
@@ -1329,7 +1347,7 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    stats_interval(0L, "Stats are reported every N operations when\n" +
+    stats_interval(0,"Stats are reported every N operations when\n" +
         "\tthis is greater than zero. When 0 the interval grows over time.") {
       @Override public Object parseValue(String value) {
         return Long.parseLong(value);
@@ -1346,12 +1364,12 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    soft_rate_limit(0.0d,"") {
+    soft_rate_limit(0.0,"") {
       @Override public Object parseValue(String value) {
         return Double.parseDouble(value);
       }
     },
-    hard_rate_limit(0.0d,"When not equal to 0 this make threads\n" +
+    hard_rate_limit(0.0,"When not equal to 0 this make threads\n" +
         "\tsleep at each stats reporting interval until the compaction\n" +
         "\tscore for all levels is less than or equal to this value.") {
       @Override public Object parseValue(String value) {
@@ -1365,10 +1383,11 @@ public class DbBenchmark {
         return Integer.parseInt(value);
       }
     },
-    max_compaction_bytes(0L, "Limit number of bytes in one compaction to be lower than this\n" +
-            "\threshold. But it's not guaranteed.") {
+    max_grandparent_overlap_factor(10,"Control maximum bytes of\n" +
+        "\toverlaps in grandparent (i.e., level+2) before we stop building a\n" +
+        "\tsingle file in a level->level+1 compaction.") {
       @Override public Object parseValue(String value) {
-        return Long.parseLong(value);
+        return Integer.parseInt(value);
       }
     },
     readonly(false,"Run read only benchmarks.") {
@@ -1379,6 +1398,13 @@ public class DbBenchmark {
     disable_auto_compactions(false,"Do not auto trigger compactions.") {
       @Override public Object parseValue(String value) {
         return parseBoolean(value);
+      }
+    },
+    source_compaction_factor(1,"Cap the size of data in level-K for\n" +
+        "\ta compaction run that compacts Level-K with Level-(K+1) (for\n" +
+        "\tK >= 1)") {
+      @Override public Object parseValue(String value) {
+        return Integer.parseInt(value);
       }
     },
     wal_ttl_seconds(0L,"Set the TTL for the WAL Files in seconds.") {
@@ -1393,18 +1419,12 @@ public class DbBenchmark {
       }
     },
     /* TODO(yhchiang): enable the following
-    direct_reads(rocksdb::EnvOptions().use_direct_reads,
-        "Allow direct I/O reads.") {
+    bufferedio(rocksdb::EnvOptions().use_os_buffer,
+        "Allow buffered io using OS buffers.") {
       @Override public Object parseValue(String value) {
         return parseBoolean(value);
       }
-      },
-    direct_writes(rocksdb::EnvOptions().use_direct_reads,
-      "Allow direct I/O reads.") {
-      @Override public Object parseValue(String value) {
-      return parseBoolean(value);
-      }
-      },
+    },
     */
     mmap_read(false,
         "Allow reads to occur via mmap-ing files.") {

@@ -55,6 +55,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0  > ${STAT_FILE}.fillseq
 
@@ -72,6 +73,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=8 > ${STAT_FILE}.overwrite
@@ -90,6 +92,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=1 > /dev/null
@@ -108,6 +111,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readrandom
@@ -127,6 +131,7 @@ make release
     --use_tailing_iterator=1 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readrandomtailing
@@ -145,6 +150,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readrandomsmallblockcache
@@ -165,6 +171,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readrandom_mem_sst
@@ -184,6 +191,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=1 > /dev/null
@@ -202,6 +210,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > /dev/null
@@ -221,6 +230,7 @@ make release
     --disable_auto_compactions=1 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readrandom_filluniquerandom
@@ -241,6 +251,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=16 > ${STAT_FILE}.readwhilewriting
@@ -259,6 +270,7 @@ make release
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --value_size=10 \
@@ -283,6 +295,7 @@ common_in_mem_args="--db=/dev/shm/rocksdb \
     --disable_wal=0 \
     --wal_dir=/dev/shm/rocksdb \
     --sync=0 \
+    --disable_data_sync=1 \
     --verify_checksum=1 \
     --delete_obsolete_files_period_micros=314572800 \
     --max_grandparent_overlap_factor=10 \
@@ -343,6 +356,7 @@ common_in_mem_args="--db=/dev/shm/rocksdb \
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0  > ${STAT_FILE}.fillseq_lots_column_families
 
@@ -358,6 +372,7 @@ common_in_mem_args="--db=/dev/shm/rocksdb \
     --open_files=55000 \
     --statistics=1 \
     --histogram=1 \
+    --disable_data_sync=1 \
     --disable_wal=1 \
     --sync=0 \
     --threads=8 > ${STAT_FILE}.overwrite_lots_column_families

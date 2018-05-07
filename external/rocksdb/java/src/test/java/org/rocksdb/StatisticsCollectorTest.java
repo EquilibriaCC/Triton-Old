@@ -1,7 +1,7 @@
 // Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree. An additional grant
+// of patent rights can be found in the PATENTS file in the same directory.
 
 package org.rocksdb;
 
@@ -26,30 +26,27 @@ public class StatisticsCollectorTest {
   @Test
   public void statisticsCollector()
       throws InterruptedException, RocksDBException {
-    try (final Statistics statistics = new Statistics();
-            final Options opt = new Options()
-        .setStatistics(statistics)
+    try (final Options opt = new Options()
+        .createStatistics()
         .setCreateIfMissing(true);
          final RocksDB db = RocksDB.open(opt,
              dbFolder.getRoot().getAbsolutePath())) {
+      final Statistics stats = opt.statisticsPtr();
 
-      try(final Statistics stats = opt.statistics()) {
+      final StatsCallbackMock callback = new StatsCallbackMock();
+      final StatsCollectorInput statsInput =
+          new StatsCollectorInput(stats, callback);
 
-        final StatsCallbackMock callback = new StatsCallbackMock();
-        final StatsCollectorInput statsInput =
-                new StatsCollectorInput(stats, callback);
+      final StatisticsCollector statsCollector = new StatisticsCollector(
+          Collections.singletonList(statsInput), 100);
+      statsCollector.start();
 
-        final StatisticsCollector statsCollector = new StatisticsCollector(
-                Collections.singletonList(statsInput), 100);
-        statsCollector.start();
+      Thread.sleep(1000);
 
-        Thread.sleep(1000);
+      assertThat(callback.tickerCallbackCount).isGreaterThan(0);
+      assertThat(callback.histCallbackCount).isGreaterThan(0);
 
-        assertThat(callback.tickerCallbackCount).isGreaterThan(0);
-        assertThat(callback.histCallbackCount).isGreaterThan(0);
-
-        statsCollector.shutDown(1000);
-      }
+      statsCollector.shutDown(1000);
     }
   }
 }

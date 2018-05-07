@@ -1,7 +1,7 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -13,7 +13,6 @@
 #if !defined(ROCKSDB_LITE)
 
 #include "db/db_test_util.h"
-#include "port/port.h"
 #include "port/stack_trace.h"
 
 namespace rocksdb {
@@ -57,6 +56,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase) {
       Options options;
       options.env = env.get();
       options.create_if_missing = true;
+      options.db_write_buffer_size = 2048;
       options.write_buffer_size = 2048;
       options.max_write_buffer_number = 2;
       options.level0_file_num_compaction_trigger = 2;
@@ -74,7 +74,6 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase) {
       options.compression_per_level[0] = kNoCompression;
       options.compression_per_level[1] = kLZ4Compression;
       options.compression_per_level[2] = kSnappyCompression;
-      options.env = env_;
 
       DestroyAndReopen(options);
 
@@ -126,6 +125,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase2) {
 
   Options options = CurrentOptions();
   options.create_if_missing = true;
+  options.db_write_buffer_size = 204800;
   options.write_buffer_size = 20480;
   options.max_write_buffer_number = 2;
   options.level0_file_num_compaction_trigger = 2;
@@ -137,7 +137,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase2) {
   options.max_bytes_for_level_multiplier = 4;
   options.max_background_compactions = 2;
   options.num_levels = 5;
-  options.max_compaction_bytes = 0;  // Force not expanding in compactions
+  options.expanded_compaction_factor = 0;  // Force not expanding in compactions
   BlockBasedTableOptions table_options;
   table_options.block_size = 1024;
   options.table_factory.reset(NewBlockBasedTableFactory(table_options));
@@ -223,9 +223,8 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase2) {
   ASSERT_OK(dbfull()->SetOptions({
       {"disable_auto_compactions", "true"},
   }));
-  // Write about 650K more.
-  // Each file is about 11KB, with 9KB of data.
-  for (int i = 0; i < 1300; i++) {
+  // Write about 600K more
+  for (int i = 0; i < 1500; i++) {
     ASSERT_OK(Put(Key(static_cast<int>(rnd.Uniform(kMaxKey))),
                   RandomString(&rnd, 380)));
   }
@@ -251,7 +250,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBase2) {
   });
   rocksdb::SyncPoint::GetInstance()->EnableProcessing();
 
-  rocksdb::port::Thread thread([this] {
+  std::thread thread([this] {
     TEST_SYNC_POINT("DynamicLevelMaxBytesBase2:compact_range_start");
     ASSERT_OK(db_->CompactRange(CompactRangeOptions(), nullptr, nullptr));
     TEST_SYNC_POINT("DynamicLevelMaxBytesBase2:compact_range_finish");
@@ -282,6 +281,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesCompactRange) {
 
   Options options = CurrentOptions();
   options.create_if_missing = true;
+  options.db_write_buffer_size = 2048;
   options.write_buffer_size = 2048;
   options.max_write_buffer_number = 2;
   options.level0_file_num_compaction_trigger = 2;
@@ -294,7 +294,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesCompactRange) {
   options.max_background_compactions = 1;
   const int kNumLevels = 5;
   options.num_levels = kNumLevels;
-  options.max_compaction_bytes = 1;  // Force not expanding in compactions
+  options.expanded_compaction_factor = 0;  // Force not expanding in compactions
   BlockBasedTableOptions table_options;
   table_options.block_size = 1024;
   options.table_factory.reset(NewBlockBasedTableFactory(table_options));
@@ -359,6 +359,7 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesCompactRange) {
 TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBaseInc) {
   Options options = CurrentOptions();
   options.create_if_missing = true;
+  options.db_write_buffer_size = 2048;
   options.write_buffer_size = 2048;
   options.max_write_buffer_number = 2;
   options.level0_file_num_compaction_trigger = 2;
@@ -371,7 +372,6 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBaseInc) {
   options.soft_rate_limit = 1.1;
   options.max_background_compactions = 2;
   options.num_levels = 5;
-  options.max_compaction_bytes = 100000000;
 
   DestroyAndReopen(options);
 
@@ -405,12 +405,13 @@ TEST_F(DBTestDynamicLevel, DynamicLevelMaxBytesBaseInc) {
   env_->SetBackgroundThreads(1, Env::HIGH);
 }
 
-TEST_F(DBTestDynamicLevel, DISABLED_MigrateToDynamicLevelMaxBytesBase) {
+TEST_F(DBTestDynamicLevel, MigrateToDynamicLevelMaxBytesBase) {
   Random rnd(301);
   const int kMaxKey = 2000;
 
   Options options;
   options.create_if_missing = true;
+  options.db_write_buffer_size = 2048;
   options.write_buffer_size = 2048;
   options.max_write_buffer_number = 8;
   options.level0_file_num_compaction_trigger = 4;
@@ -460,7 +461,7 @@ TEST_F(DBTestDynamicLevel, DISABLED_MigrateToDynamicLevelMaxBytesBase) {
   compaction_finished = false;
   // Issue manual compaction in one thread and still verify DB state
   // in main thread.
-  rocksdb::port::Thread t([&]() {
+  std::thread t([&]() {
     CompactRangeOptions compact_options;
     compact_options.change_level = true;
     compact_options.target_level = options.num_levels - 1;

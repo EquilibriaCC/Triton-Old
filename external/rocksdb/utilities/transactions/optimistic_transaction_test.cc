@@ -1,11 +1,10 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 
 #ifndef ROCKSDB_LITE
 
-#include <functional>
 #include <string>
 #include <thread>
 
@@ -17,7 +16,6 @@
 #include "util/random.h"
 #include "util/testharness.h"
 #include "util/transaction_test_util.h"
-#include "port/port.h"
 
 using std::string;
 
@@ -36,25 +34,13 @@ class OptimisticTransactionTest : public testing::Test {
     dbname = test::TmpDir() + "/optimistic_transaction_testdb";
 
     DestroyDB(dbname, options);
-    Open();
+    Status s = OptimisticTransactionDB::Open(options, dbname, &txn_db);
+    assert(s.ok());
+    db = txn_db->GetBaseDB();
   }
   ~OptimisticTransactionTest() {
     delete txn_db;
     DestroyDB(dbname, options);
-  }
-
-  void Reopen() {
-    delete txn_db;
-    txn_db = nullptr;
-    Open();
-  }
-
-private:
-  void Open() {
-    Status s = OptimisticTransactionDB::Open(options, dbname, &txn_db);
-    assert(s.ok());
-    assert(txn_db != nullptr);
-    db = txn_db->GetBaseDB();
   }
 };
 
@@ -465,7 +451,6 @@ TEST_F(OptimisticTransactionTest, ColumnFamiliesTest) {
   delete cfa;
   delete cfb;
   delete txn_db;
-  txn_db = nullptr;
 
   // open DB with three column families
   std::vector<ColumnFamilyDescriptor> column_families;
@@ -481,7 +466,6 @@ TEST_F(OptimisticTransactionTest, ColumnFamiliesTest) {
   s = OptimisticTransactionDB::Open(options, dbname, column_families, &handles,
                                     &txn_db);
   ASSERT_OK(s);
-  assert(txn_db != nullptr);
   db = txn_db->GetBaseDB();
 
   Transaction* txn = txn_db->BeginTransaction(write_options);
@@ -1331,7 +1315,7 @@ TEST_F(OptimisticTransactionTest, OptimisticTransactionStressTest) {
   // Setting the key-space to be 100 keys should cause enough write-conflicts
   // to make this test interesting.
 
-  std::vector<port::Thread> threads;
+  std::vector<std::thread> threads;
 
   std::function<void()> call_inserter = [&] {
     ASSERT_OK(OptimisticTransactionStressTestInserter(
@@ -1352,33 +1336,6 @@ TEST_F(OptimisticTransactionTest, OptimisticTransactionStressTest) {
   // Verify that data is consistent
   Status s = RandomTransactionInserter::Verify(db, num_sets);
   ASSERT_OK(s);
-}
-
-TEST_F(OptimisticTransactionTest, SequenceNumberAfterRecoverTest) {
-  WriteOptions write_options;
-  OptimisticTransactionOptions transaction_options;
-
-  Transaction* transaction(txn_db->BeginTransaction(write_options, transaction_options));
-  Status s = transaction->Put("foo", "val");
-  ASSERT_OK(s);
-  s = transaction->Put("foo2", "val");
-  ASSERT_OK(s);
-  s = transaction->Put("foo3", "val");
-  ASSERT_OK(s);
-  s = transaction->Commit();
-  ASSERT_OK(s);
-  delete transaction;
-
-  Reopen();
-  transaction = txn_db->BeginTransaction(write_options, transaction_options);
-  s = transaction->Put("bar", "val");
-  ASSERT_OK(s);
-  s = transaction->Put("bar2", "val");
-  ASSERT_OK(s);
-  s = transaction->Commit();
-  ASSERT_OK(s);
-
-  delete transaction;
 }
 
 }  // namespace rocksdb

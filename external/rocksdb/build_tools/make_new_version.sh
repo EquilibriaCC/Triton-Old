@@ -17,9 +17,7 @@ function title() {
 }
 
 usage="Create new RocksDB version and prepare it for the release process\n"
-usage+="USAGE: ./make_new_version.sh <version> [<remote>]\n"
-usage+="  version: specify a version without '.fb' suffix (e.g. 5.4).\n"
-usage+="  remote: name of the remote to push the branch to (default: origin)."
+usage+="USAGE: ./make_new_version.sh <version>"
 
 # -- Pre-check
 if [[ $# < 1 ]]; then
@@ -28,11 +26,6 @@ if [[ $# < 1 ]]; then
 fi
 
 ROCKSDB_VERSION=$1
-
-REMOTE="origin"
-if [[ $# > 1 ]]; then
-  REMOTE=$2
-fi
 
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 echo $GIT_BRANCH
@@ -48,6 +41,6 @@ $GIT checkout -b $BRANCH
 
 # Setting up the proxy for remote repo access
 title "Pushing new branch to remote repo ..."
-git push $REMOTE --set-upstream $BRANCH
+git push origin --set-upstream $BRANCH
 
 title "Branch $BRANCH is pushed to github;"

@@ -1,7 +1,7 @@
 // Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree. An additional grant
+// of patent rights can be found in the PATENTS file in the same directory.
 
 import java.lang.IllegalArgumentException;
 import java.util.Arrays;
@@ -12,31 +12,31 @@ import java.util.ArrayList;
 import org.rocksdb.*;
 import org.rocksdb.util.SizeUnit;
 
+import java.io.IOException;
+
 public class RocksDBSample {
   static {
     RocksDB.loadLibrary();
   }
 
-  public static void main(final String[] args) {
+  public static void main(String[] args) {
     if (args.length < 1) {
       System.out.println("usage: RocksDBSample db_path");
-      System.exit(-1);
+      return;
     }
-
-    final String db_path = args[0];
-    final String db_path_not_found = db_path + "_not_found";
+    String db_path = args[0];
+    String db_path_not_found = db_path + "_not_found";
 
     System.out.println("RocksDBSample");
     try (final Options options = new Options();
          final Filter bloomFilter = new BloomFilter(10);
          final ReadOptions readOptions = new ReadOptions()
-             .setFillCache(false);
-         final RateLimiter rateLimiter = new RateLimiter(10000000,10000, 10)) {
+             .setFillCache(false)) {
 
       try (final RocksDB db = RocksDB.open(options, db_path_not_found)) {
         assert (false);
-      } catch (final RocksDBException e) {
-        System.out.format("Caught the expected exception -- %s\n", e);
+      } catch (RocksDBException e) {
+        System.out.format("caught the expected exception -- %s\n", e);
       }
 
       try {
@@ -47,11 +47,11 @@ public class RocksDBSample {
             .setMaxBackgroundCompactions(10)
             .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
             .setCompactionStyle(CompactionStyle.UNIVERSAL);
-      } catch (final IllegalArgumentException e) {
+      } catch (IllegalArgumentException e) {
         assert (false);
       }
 
-      final Statistics stats = options.statisticsPtr();
+      Statistics stats = options.statisticsPtr();
 
       assert (options.createIfMissing() == true);
       assert (options.writeBufferSize() == 8 * SizeUnit.KB);
@@ -85,7 +85,9 @@ public class RocksDBSample {
       options.setAllowMmapReads(true);
       assert (options.tableFactoryName().equals("PlainTable"));
 
-      options.setRateLimiter(rateLimiter);
+      options.setRateLimiterConfig(new GenericRateLimiterConfig(10000000,
+          10000, 10));
+      options.setRateLimiterConfig(new GenericRateLimiterConfig(10000000));
 
       final BlockBasedTableConfig table_options = new BlockBasedTableConfig();
       table_options.setBlockCacheSize(64 * SizeUnit.KB)
@@ -112,14 +114,12 @@ public class RocksDBSample {
 
       try (final RocksDB db = RocksDB.open(options, db_path)) {
         db.put("hello".getBytes(), "world".getBytes());
-
-        final byte[] value = db.get("hello".getBytes());
+        byte[] value = db.get("hello".getBytes());
         assert ("world".equals(new String(value)));
-
-        final String str = db.getProperty("rocksdb.stats");
+        String str = db.getProperty("rocksdb.stats");
         assert (str != null && !str.equals(""));
-      } catch (final RocksDBException e) {
-        System.out.format("[ERROR] caught the unexpected exception -- %s\n", e);
+      } catch (RocksDBException e) {
+        System.out.format("[ERROR] caught the unexpceted exception -- %s\n", e);
         assert (false);
       }
 
@@ -174,8 +174,8 @@ public class RocksDBSample {
         value = db.get(readOptions, "world".getBytes());
         assert (value == null);
 
-        final byte[] testKey = "asdf".getBytes();
-        final byte[] testValue =
+        byte[] testKey = "asdf".getBytes();
+        byte[] testValue =
             "asdfghjkl;'?><MNBVCXZQWERTYUIOP{+_)(*&^%$#@".getBytes();
         db.put(testKey, testValue);
         byte[] testResult = db.get(testKey);
@@ -187,8 +187,8 @@ public class RocksDBSample {
         assert (Arrays.equals(testValue, testResult));
         assert (new String(testValue).equals(new String(testResult)));
 
-        final byte[] insufficientArray = new byte[10];
-        final byte[] enoughArray = new byte[50];
+        byte[] insufficientArray = new byte[10];
+        byte[] enoughArray = new byte[50];
         int len;
         len = db.get(testKey, insufficientArray);
         assert (len > insufficientArray.length);
@@ -220,22 +220,22 @@ public class RocksDBSample {
         }
 
         try {
-          for (final TickerType statsType : TickerType.values()) {
+          for (TickerType statsType : TickerType.values()) {
             stats.getTickerCount(statsType);
           }
           System.out.println("getTickerCount() passed.");
-        } catch (final Exception e) {
+        } catch (Exception e) {
           System.out.println("Failed in call to getTickerCount()");
           assert (false); //Should never reach here.
         }
 
         try {
-          for (final HistogramType histogramType : HistogramType.values()) {
-            HistogramData data = stats.getHistogramData(histogramType);
+          for (HistogramType histogramType : HistogramType.values()) {
+            HistogramData data = stats.geHistogramData(histogramType);
           }
-          System.out.println("getHistogramData() passed.");
-        } catch (final Exception e) {
-          System.out.println("Failed in call to getHistogramData()");
+          System.out.println("geHistogramData() passed.");
+        } catch (Exception e) {
+          System.out.println("Failed in call to geHistogramData()");
           assert (false); //Should never reach here.
         }
 
@@ -283,16 +283,16 @@ public class RocksDBSample {
 
         Map<byte[], byte[]> values = db.multiGet(keys);
         assert (values.size() == keys.size());
-        for (final byte[] value1 : values.values()) {
+        for (byte[] value1 : values.values()) {
           assert (value1 != null);
         }
 
         values = db.multiGet(new ReadOptions(), keys);
         assert (values.size() == keys.size());
-        for (final byte[] value1 : values.values()) {
+        for (byte[] value1 : values.values()) {
           assert (value1 != null);
         }
-      } catch (final RocksDBException e) {
+      } catch (RocksDBException e) {
         System.err.println(e);
       }
     }

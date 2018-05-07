@@ -65,7 +65,7 @@ public class TransactionLogIterator extends RocksObject {
    * by a TransactionLogIterator containing a sequence
    * number and a {@link WriteBatch} instance.</p>
    */
-  public static final class BatchResult {
+  public final class BatchResult {
     /**
      * <p>Constructor of BatchResult class.</p>
      *
@@ -76,7 +76,7 @@ public class TransactionLogIterator extends RocksObject {
     public BatchResult(final long sequenceNumber,
         final long nativeHandle) {
       sequenceNumber_ = sequenceNumber;
-      writeBatch_ = new WriteBatch(nativeHandle, true);
+      writeBatch_ = new WriteBatch(nativeHandle);
     }
 
     /**

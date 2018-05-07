@@ -71,16 +71,14 @@ class PlainTableReader: public TableReader {
  public:
   static Status Open(const ImmutableCFOptions& ioptions,
                      const EnvOptions& env_options,
-                     const InternalKeyComparator& icomparator,
+                     const InternalKeyComparator& internal_comparator,
                      unique_ptr<RandomAccessFileReader>&& file,
                      uint64_t file_size, unique_ptr<TableReader>* table,
                      const int bloom_bits_per_key, double hash_table_ratio,
                      size_t index_sparseness, size_t huge_page_tlb_size,
                      bool full_scan_mode);
 
-  InternalIterator* NewIterator(const ReadOptions&,
-                                Arena* arena = nullptr,
-                                const InternalKeyComparator* = nullptr,
+  InternalIterator* NewIterator(const ReadOptions&, Arena* arena = nullptr,
                                 bool skip_filters = false) override;
 
   void Prepare(const Slice& target) override;

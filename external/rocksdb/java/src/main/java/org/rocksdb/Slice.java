@@ -1,7 +1,7 @@
 // Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under both the GPLv2 (found in the
-//  COPYING file in the root directory) and Apache 2.0 License
-//  (found in the LICENSE.Apache file in the root directory).
+// This source code is licensed under the BSD-style license found in the
+// LICENSE file in the root directory of this source tree. An additional grant
+// of patent rights can be found in the PATENTS file in the same directory.
 
 package org.rocksdb;
 
@@ -14,13 +14,6 @@ package org.rocksdb;
  * values consider using {@link org.rocksdb.DirectSlice}</p>
  */
 public class Slice extends AbstractSlice<byte[]> {
-
-  /**
-   * Indicates whether we have to free the memory pointed to by the Slice
-   */
-  private volatile boolean cleared;
-  private volatile long internalBufferOffset = 0;
-
   /**
    * <p>Called from JNI to construct a new Java Slice
    * without an underlying C++ object set
@@ -34,7 +27,6 @@ public class Slice extends AbstractSlice<byte[]> {
    * Slice objects through this, they are not creating underlying C++ Slice
    * objects, and so there is nothing to free (dispose) from Java.</p>
    */
-  @SuppressWarnings("unused")
   private Slice() {
     super();
   }
@@ -70,18 +62,6 @@ public class Slice extends AbstractSlice<byte[]> {
     super(createNewSlice1(data));
   }
 
-  @Override
-  public void clear() {
-    clear0(getNativeHandle(), !cleared, internalBufferOffset);
-    cleared = true;
-  }
-
-  @Override
-  public void removePrefix(final int n) {
-    removePrefix0(getNativeHandle(), n);
-    this.internalBufferOffset += n;
-  }
-
   /**
    * <p>Deletes underlying C++ slice pointer
    * and any buffered data.</p>
@@ -94,9 +74,7 @@ public class Slice extends AbstractSlice<byte[]> {
   @Override
   protected void disposeInternal() {
     final long nativeHandle = getNativeHandle();
-    if(!cleared) {
-      disposeInternalBuf(nativeHandle, internalBufferOffset);
-    }
+    disposeInternalBuf(nativeHandle);
     super.disposeInternal(nativeHandle);
   }
 
@@ -104,9 +82,5 @@ public class Slice extends AbstractSlice<byte[]> {
   private native static long createNewSlice0(final byte[] data,
       final int length);
   private native static long createNewSlice1(final byte[] data);
-  private native void clear0(long handle, boolean internalBuffer,
-      long internalBufferOffset);
-  private native void removePrefix0(long handle, int length);
-  private native void disposeInternalBuf(final long handle,
-      long internalBufferOffset);
+  private native void disposeInternalBuf(final long handle);
 }

@@ -2063,7 +2063,7 @@ size_t WalletGreen::validateSaveAndSendTransaction(const ITransactionReader& tra
 
 // m_logger(DEBUGGING) << "m_upperTransactionSizeLimit:"<<m_upperTransactionSizeLimit;
 
-int sizeLimit = std::min<unsigned long>(m_upperTransactionSizeLimit, TX_SAFETY_NET); 
+int sizeLimit = std::min<unsigned long>(m_upperTransactionSizeLimit, TRITON_TRANSACTION_SIZE_LIMIT); 
 
  m_logger(DEBUGGING) << "transactionData.size():"<<transactionData.size();
 

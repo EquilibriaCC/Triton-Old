@@ -563,7 +563,7 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
   uint64_t minerReward = 0;
   auto blockValidationResult = validateBlock(cachedBlock, cache, minerReward);
   if (blockValidationResult) {
-    logger(Logging::WARNING) << "Failed to validate block " << cachedBlock.getBlockHash() << ": " << blockValidationResult.message();
+    logger(Logging::DEBUGGING) << "Failed to validate block " << cachedBlock.getBlockHash() << ": " << blockValidationResult.message();
     return blockValidationResult;
   }
 
@@ -937,7 +937,7 @@ bool Core::isTransactionValidForPool(const CachedTransaction& cachedTransaction,
     return false;
   }
 
-  auto maxTransactionSize = getMaximumTransactionAllowedSize(blockMedianSize, currency);
+  auto maxTransactionSize = TRITON_TRANSACTION_SIZE_LIMIT;
   if (cachedTransaction.getTransactionBinaryArray().size() > maxTransactionSize) {
     logger(Logging::WARNING) << "Transaction " << cachedTransaction.getTransactionHash()
       << " is not valid. Reason: transaction is too big (" << cachedTransaction.getTransactionBinaryArray().size()

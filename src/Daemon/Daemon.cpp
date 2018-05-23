@@ -349,17 +349,13 @@ rpcServer.enableCors(command_line::get_arg(vm, arg_enable_cors));
 
 bool command_line_preprocessor(const boost::program_options::variables_map &vm, LoggerRef &logger) {
   bool exit = false;
-  logger(INFO, BRIGHT_BLUE) << "\n"
+ logger(INFO, BRIGHT_BLUE) << "\n"
           "_________________________________________   __\n"
           "___  __/__  __ \___  _/__  __/_  __ \__  | / /\n"
           "__  /  __  /_/ /__  / __  /  _  / / /_   |/ / \n"
           "_  /   _  _, _/__/ /  _  /   / /_/ /_  /|  / \n"
           "/_/    /_/ |_| /___/  /_/    \____/ /_/ |_/  \n"  << ENDL;
   if (command_line::get_arg(vm, command_line::arg_version)) {
-
-
-
-
     std::cout << CRYPTONOTE_NAME << " v" << PROJECT_VERSION_LONG << ENDL;
     exit = true;
   }

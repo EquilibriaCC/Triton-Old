@@ -563,7 +563,7 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
   uint64_t minerReward = 0;
   auto blockValidationResult = validateBlock(cachedBlock, cache, minerReward);
   if (blockValidationResult) {
-    logger(Logging::DEBUGGING) << "Failed to validate block " << cachedBlock.getBlockHash() << ": " << blockValidationResult.message();
+    logger(Logging::WARNING) << "Failed to validate block " << cachedBlock.getBlockHash() << ": " << blockValidationResult.message();
     return blockValidationResult;
   }
 
@@ -917,7 +917,7 @@ bool Core::addTransactionToPool(CachedTransaction&& cachedTransaction) {
   if (!isTransactionValidForPool(cachedTransaction, validatorState)) {
     return false;
   }
-  
+
   auto transactionHash = cachedTransaction.getTransactionHash();
   if (!transactionPool->pushTransaction(std::move(cachedTransaction), std::move(validatorState))) {
     logger(Logging::DEBUGGING) << "Failed to push transaction " << transactionHash << " to pool, already exists";
@@ -937,7 +937,7 @@ bool Core::isTransactionValidForPool(const CachedTransaction& cachedTransaction,
     return false;
   }
 
-  auto maxTransactionSize = TRITON_TRANSACTION_SIZE_LIMIT;
+  auto maxTransactionSize = getMaximumTransactionAllowedSize(blockMedianSize, currency);
   if (cachedTransaction.getTransactionBinaryArray().size() > maxTransactionSize) {
     logger(Logging::WARNING) << "Transaction " << cachedTransaction.getTransactionHash()
       << " is not valid. Reason: transaction is too big (" << cachedTransaction.getTransactionBinaryArray().size()
@@ -1806,7 +1806,7 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 
   size_t maxTotalSize = (125 * medianSize) / 100;
   maxTotalSize = std::min(maxTotalSize, maxCumulativeSize) - currency.minerTxBlobReservedSize();
-  size_t blockSizeLimit = maxTotalSize;
+
   TransactionSpentInputsChecker spentInputsChecker;
 
   std::vector<CachedTransaction> poolTransactions = transactionPool->getPoolTransactions();
@@ -1814,13 +1814,13 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
     const CachedTransaction& transaction = *it;
     auto transactionBlobSize = transaction.getTransactionBinaryArray().size();
 
-    if ((transactionsSize + transactionBlobSize) > blockSizeLimit) {
+    if ((transactionsSize + transactionBlobSize) > currency.fusionTxMaxSize()) {
       logger(Logging::INFO) << "Fusion Transaction too large size: " << transactionBlobSize;
 
       continue;
     }
 
-    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction())) {
+    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction()) && transactionBlobSize < TX_SAFETY_NET) {
       block.transactionHashes.emplace_back(transaction.getTransactionHash());
       transactionsSize += transactionBlobSize;
       logger(Logging::DEBUGGING) << "Fusion transaction " << transaction.getTransactionHash() << " included to block template size:" <<transactionBlobSize;
@@ -1828,9 +1828,8 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
   }
 
   for (const auto& cachedTransaction : poolTransactions) {
-	  
-	//printf("transactionsSize:%lu\n",transactionsSize);
-	  
+    size_t blockSizeLimit = (cachedTransaction.getTransactionFee() == 0) ? medianSize : maxTotalSize;
+
     if ((transactionsSize + cachedTransaction.getTransactionBinaryArray().size()) > blockSizeLimit) {
       continue;
     }

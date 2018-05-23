@@ -1829,7 +1829,7 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 
   for (const auto& cachedTransaction : poolTransactions) {
 	  
-	  printf("transactionsSize:%lu\n",transactionsSize);
+	//printf("transactionsSize:%lu\n",transactionsSize);
 	  
     size_t blockSizeLimit = (cachedTransaction.getTransactionFee() == 0) ? medianSize : maxTotalSize;
 

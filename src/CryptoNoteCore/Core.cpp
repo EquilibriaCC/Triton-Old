@@ -917,7 +917,7 @@ bool Core::addTransactionToPool(CachedTransaction&& cachedTransaction) {
   if (!isTransactionValidForPool(cachedTransaction, validatorState)) {
     return false;
   }
-
+  
   auto transactionHash = cachedTransaction.getTransactionHash();
   if (!transactionPool->pushTransaction(std::move(cachedTransaction), std::move(validatorState))) {
     logger(Logging::DEBUGGING) << "Failed to push transaction " << transactionHash << " to pool, already exists";
@@ -1820,7 +1820,7 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
       continue;
     }
 
-    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction()) && transactionBlobSize < TX_SAFETY_NET) {
+    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction())) {
       block.transactionHashes.emplace_back(transaction.getTransactionHash());
       transactionsSize += transactionBlobSize;
       logger(Logging::DEBUGGING) << "Fusion transaction " << transaction.getTransactionHash() << " included to block template size:" <<transactionBlobSize;
@@ -1828,6 +1828,9 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
   }
 
   for (const auto& cachedTransaction : poolTransactions) {
+	  
+	  printf("transactionsSize:%lu\n",transactionsSize);
+	  
     size_t blockSizeLimit = (cachedTransaction.getTransactionFee() == 0) ? medianSize : maxTotalSize;
 
     if ((transactionsSize + cachedTransaction.getTransactionBinaryArray().size()) > blockSizeLimit) {

@@ -1831,8 +1831,6 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 	  
 	//printf("transactionsSize:%lu\n",transactionsSize);
 	  
-    size_t blockSizeLimit = (cachedTransaction.getTransactionFee() == 0) ? medianSize : maxTotalSize;
-
     if ((transactionsSize + cachedTransaction.getTransactionBinaryArray().size()) > blockSizeLimit) {
       continue;
     }

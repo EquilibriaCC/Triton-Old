@@ -1806,7 +1806,7 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 
   size_t maxTotalSize = (125 * medianSize) / 100;
   maxTotalSize = std::min(maxTotalSize, maxCumulativeSize) - currency.minerTxBlobReservedSize();
-
+  size_t blockSizeLimit = maxTotalSize;
   TransactionSpentInputsChecker spentInputsChecker;
 
   std::vector<CachedTransaction> poolTransactions = transactionPool->getPoolTransactions();
@@ -1814,7 +1814,7 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
     const CachedTransaction& transaction = *it;
     auto transactionBlobSize = transaction.getTransactionBinaryArray().size();
 
-    if ((transactionsSize + transactionBlobSize) > currency.fusionTxMaxSize()) {
+    if ((transactionsSize + transactionBlobSize) > blockSizeLimit) {
       logger(Logging::INFO) << "Fusion Transaction too large size: " << transactionBlobSize;
 
       continue;

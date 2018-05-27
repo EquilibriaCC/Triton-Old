@@ -817,7 +817,7 @@ std::error_code Core::submitBlock(BinaryArray&& rawBlockTemplate) {
   for (const auto& transactionHash : blockTemplate.transactionHashes) {
     if (!transactionPool->checkIfTransactionPresent(transactionHash)) {
       logger(Logging::WARNING) << "The transaction " << Common::podToHex(transactionHash)
-                               << " is absent in transaction pool";
+                               << " is absent in transaction pool.  We have an out of date BlockTemplate, you should need to adjust pool software.";
       return error::BlockValidationError::TRANSACTION_ABSENT_IN_POOL;
     }
 
@@ -937,7 +937,7 @@ bool Core::isTransactionValidForPool(const CachedTransaction& cachedTransaction,
     return false;
   }
 
-  auto maxTransactionSize = getMaximumTransactionAllowedSize(blockMedianSize, currency);
+  auto maxTransactionSize = TRITON_TRANSACTION_SIZE_LIMIT;
   if (cachedTransaction.getTransactionBinaryArray().size() > maxTransactionSize) {
     logger(Logging::WARNING) << "Transaction " << cachedTransaction.getTransactionHash()
       << " is not valid. Reason: transaction is too big (" << cachedTransaction.getTransactionBinaryArray().size()
@@ -1806,29 +1806,22 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 
   size_t maxTotalSize = (125 * medianSize) / 100;
   maxTotalSize = std::min(maxTotalSize, maxCumulativeSize) - currency.minerTxBlobReservedSize();
+  
+   size_t blockSizeLimit  = maxTotalSize;
+   
+   logger(Logging::DEBUGGING) << "blockSizeLimit:"<< blockSizeLimit;
+   
+   
 
   TransactionSpentInputsChecker spentInputsChecker;
 
   std::vector<CachedTransaction> poolTransactions = transactionPool->getPoolTransactions();
-  for (auto it = poolTransactions.rbegin(); it != poolTransactions.rend() && it->getTransactionFee() == 0; ++it) {
-    const CachedTransaction& transaction = *it;
-    auto transactionBlobSize = transaction.getTransactionBinaryArray().size();
 
-    if ((transactionsSize + transactionBlobSize) > currency.fusionTxMaxSize()) {
-      logger(Logging::INFO) << "Fusion Transaction too large size: " << transactionBlobSize;
-
-      continue;
-    }
-
-    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction()) && transactionBlobSize < TX_SAFETY_NET) {
-      block.transactionHashes.emplace_back(transaction.getTransactionHash());
-      transactionsSize += transactionBlobSize;
-      logger(Logging::DEBUGGING) << "Fusion transaction " << transaction.getTransactionHash() << " included to block template size:" <<transactionBlobSize;
-    }
-  }
 
   for (const auto& cachedTransaction : poolTransactions) {
-    size_t blockSizeLimit = (cachedTransaction.getTransactionFee() == 0) ? medianSize : maxTotalSize;
+
+
+  //printf("transactionsSize:%lu\n",transactionsSize);
 
     if ((transactionsSize + cachedTransaction.getTransactionBinaryArray().size()) > blockSizeLimit) {
       continue;
@@ -1843,7 +1836,26 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 	logger(Logging::INFO) << "Transaction " << cachedTransaction.getTransactionHash() << " is failed to include to block template size:" << cachedTransaction.getTransactionBinaryArray().size();
     }
   }
+
+
+  for (auto it = poolTransactions.rbegin(); it != poolTransactions.rend() && it->getTransactionFee() == 0; ++it) {
+    const CachedTransaction& transaction = *it;
+    auto transactionBlobSize = transaction.getTransactionBinaryArray().size();
+
+    if ((transactionsSize + transactionBlobSize) > blockSizeLimit) {
+      logger(Logging::DEBUGGING) << "Fusion Transaction will not fit in block: " << transactionBlobSize;
+
+      continue;
+    }
+
+    if (!spentInputsChecker.haveSpentInputs(transaction.getTransaction())) {
+      block.transactionHashes.emplace_back(transaction.getTransactionHash());
+      transactionsSize += transactionBlobSize;
+      logger(Logging::DEBUGGING) << "Fusion transaction " << transaction.getTransactionHash() << " included to block template size:" <<transactionBlobSize;
+    }
+  }
 }
+
 
 void Core::deleteAlternativeChains() {
   while (chainsLeaves.size() > 1) {

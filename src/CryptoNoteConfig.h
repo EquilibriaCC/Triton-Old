@@ -66,7 +66,7 @@ namespace parameters {
 #define DIFFICULTY_LAG_V2                               DIFFICULTY_LAG
 
 #define MAX_BLOCK_SIZE_INITIAL                          200 * 1024
-#define MAX_BLOCK_SIZE_GROWTH_SPEED_NUMERATOR           200 * 1024
+#define MAX_BLOCK_SIZE_GROWTH_SPEED_NUMERATOR           100 * 1024
 #define MAX_BLOCK_SIZE_GROWTH_SPEED_DENOMINATOR         365 * 24 * 60 * 60 / DIFFICULTY_TARGET
 
 #define CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS       1

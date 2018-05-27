@@ -135,9 +135,7 @@ namespace parameters {
 const std::initializer_list<const char*> SEED_NODES {
   "93.188.161.244:9730",//us
   "165.227.99.38:9730",//us
-  "165.227.125.101:9730",//us
-  "178.62.5.221:9730", //eu
-  "128.199.165.75:9730"//as
+  "165.227.125.101:9730"
 };
 
 struct CheckpointData {

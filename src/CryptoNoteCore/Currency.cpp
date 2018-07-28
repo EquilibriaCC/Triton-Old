@@ -115,7 +115,7 @@ size_t Currency::difficultyWindowByBlockVersion(uint8_t blockMajorVersion) const
     return m_difficultyWindow;
   } else if (blockMajorVersion == BLOCK_MAJOR_VERSION_2) {
     return DIFFICULTY_WINDOW_V2;
-  } else if(blockMajorVersion == BLOCK_MAJOR_VERSION_5){ 
+  } else if(blockMajorVersion == BLOCK_MAJOR_VERSION_5){
 	return DIFFICULTY_WINDOW_V5;
   }else{
     return DIFFICULTY_WINDOW_V1;
@@ -438,13 +438,13 @@ bool Currency::parseAmount(const std::string& str, uint64_t& amount) const {
 
 Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
   std::vector<Difficulty> cumulativeDifficulties) const {
-	
+
 	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 10000000;}
-	
+
 	if (version >= BLOCK_MAJOR_VERSION_5) {
 		int64_t T = m_difficultyTarget;
 
-	//printf("size ts:%lu\n",timestamps.size());
+	printf("size ts:%lu\n",timestamps.size());
 
     size_t length = timestamps.size();
     assert(length == cumulativeDifficulties.size());
@@ -473,13 +473,13 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int avgdiff=d/length;
 	long unsigned int adj=(T*1000/avgtime);
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
-	//printf("avgdiff:%f, avgtime:%f   adj:%f   nextdiff:%lu\n",avgdiff,avgtime,adj,nextDiffZ);
+	printf("avgdiff:%f, avgtime:%f   adj:%f   nextdiff:%lu\n",avgdiff,avgtime,adj,nextDiffZ);
 
     if (nextDiffZ <= 1) {
       nextDiffZ = 1;
     }
 
-  
+
     return nextDiffZ;
   }
   //old

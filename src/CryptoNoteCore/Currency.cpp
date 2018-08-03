@@ -457,7 +457,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     for (size_t i = 1; i < length; i++) {
         solvetime = timestamps[i] - timestamps[i-1];
 	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
-	//printf("%lu: TS:%lu    solvetime:%d,  diff:%d\n",i,timestamps[i],solvetime,diff);
+	printf("%lu: TS:%lu    solvetime:%d,  diff:%d\n",i,timestamps[i],solvetime,diff);
 
 	//cap crazy  values
     if (solvetime < 0) { solvetime = 0; }
@@ -524,10 +524,12 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
   assert(totalWork > 0);
 
   uint64_t low, high;
-  low = mul128(totalWork, m_difficultyTarget, &high);
-  if (high != 0 || std::numeric_limits<uint64_t>::max() - low < (timeSpan - 1)) {
-    return 0;
-  }
+  mul(total_work, target_seconds, low, high);
+    // blockchain errors "difficulty overhead" if this function returns zero.
+    // TODO: consider throwing an exception instead
+    if (high != 0 || low + time_span - 1 < low) {
+      return 0;
+    }
 
   uint8_t c_zawyDifficultyBlockVersion = m_zawyDifficultyBlockVersion;
   if (m_zawyDifficultyV2) {

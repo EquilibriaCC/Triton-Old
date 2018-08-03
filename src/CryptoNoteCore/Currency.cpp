@@ -524,10 +524,12 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
   assert(totalWork > 0);
 
   uint64_t low, high;
-  low = mul128(totalWork, m_difficultyTarget, &high);
-  if (high != 0 || std::numeric_limits<uint64_t>::max() - low < (timeSpan - 1)) {
-    return 0;
-  }
+  mul(total_work, target_seconds, low, high);
+    // blockchain errors "difficulty overhead" if this function returns zero.
+    // TODO: consider throwing an exception instead
+    if (high != 0 || low + timeSpan - 1 < low) {
+      return 0;
+    }
 
   uint8_t c_zawyDifficultyBlockVersion = m_zawyDifficultyBlockVersion;
   if (m_zawyDifficultyV2) {

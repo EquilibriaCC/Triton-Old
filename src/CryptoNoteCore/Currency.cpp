@@ -444,8 +444,10 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (version >= BLOCK_MAJOR_VERSION_5) {
 		int64_t T = m_difficultyTarget;
 
-	printf("size ts:%lu\n",timestamps.size());
+    if(height == 41495 || height == 42000 || height ==  42495 || height == 43000 || height == 43495){
 
+      	printf("size ts:%lu\n",timestamps.size());
+    }
     size_t length = timestamps.size();
     assert(length == cumulativeDifficulties.size());
 
@@ -457,7 +459,9 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     for (size_t i = 1; i < length; i++) {
         solvetime = timestamps[i] - timestamps[i-1];
 	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
-	printf("%lu: TS:%lu    solvetime:%d,  diff:%d\n",i,timestamps[i],solvetime,diff);
+  if(height == 41495 || height == 42000 || height ==  42495 || height == 43000 || height == 43495){
+  	 printf("%lu: TS:%lu    solvetime:%lu,  diff:%lu\n",i,timestamps[i],solvetime,diff);
+   }
 
 	//cap crazy  values
     if (solvetime < 0) { solvetime = 0; }
@@ -473,8 +477,10 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int avgdiff=d/length;
 	long unsigned int adj=(T*1000/avgtime);
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
-	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu\n",avgdiff,avgtime,adj,nextDiffZ);
+  if(height == 41495 || height == 42000 || height ==  42495 || height == 43000 || height == 43495){
 
+    	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,height);
+  }
     if (nextDiffZ <= 1) {
       nextDiffZ = 1;
     }

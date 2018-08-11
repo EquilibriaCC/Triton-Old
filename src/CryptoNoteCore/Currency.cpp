@@ -479,7 +479,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
   if(blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495){
 
-    	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,height);
+    	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,blockIndex);
   }
     if (nextDiffZ <= 1) {
       nextDiffZ = 1;

@@ -545,7 +545,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
       return 0;
     }
     uint64_t nextDiffZ = low / timeSpan;
-    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000){
+    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || height == 23000 || height == 23500 || height == 24830 || height == 24830 || height == 24860){
            printf("Low:%lu   timeSpan:%lu     NextDiff:%lu    height:%u\n",low,timeSpan,nextDiffZ,blockIndex);
 
          }

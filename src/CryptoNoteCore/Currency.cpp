@@ -477,7 +477,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int avgdiff=d/length;
 	long unsigned int adj=(T*1000/avgtime);
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
-  if(blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495){
+  if(blockIndex == 26000 ||blockIndex == 24500 || blockIndex == 24860 || blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495){
 
     	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,blockIndex);
   }
@@ -545,7 +545,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
       return 0;
     }
     uint64_t nextDiffZ = low / timeSpan;
-    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || blockIndex == 23000 || blockIndex == 23500 || blockIndex == 24830 || blockIndex == 24830 || blockIndex == 24860){
+    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || blockIndex == 23000 || blockIndex == 23500 || blockIndex == 24830){
            printf("Low:%lu   timeSpan:%lu     NextDiff:%lu    height:%u\n",low,timeSpan,nextDiffZ,blockIndex);
 
          }

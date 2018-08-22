@@ -442,9 +442,10 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 10000000;}
 
 	if (version >= BLOCK_MAJOR_VERSION_5) {
+    prinf("YO ITS THIS ALLOY ALGO MUTHAFUCKA");
 		int64_t T = m_difficultyTarget;
 
-    if(blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
+    if(blockIndex == 24922){
 
       	printf("size ts:%lu\n",timestamps.size());
     }
@@ -459,7 +460,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     for (size_t i = 1; i < length; i++) {
         solvetime = timestamps[i] - timestamps[i-1];
 	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
-  if( blockIndex == 24861 || blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
+  if(blockIndex == 24922){
     logger(DEBUGGING) << i << ":   " << timestamps[i] << "     " << solvetime << "           " << diff;
      printf("%lu: TS:%lu    solvetime:%lu,  diff:%lu\n",i,timestamps[i],solvetime,diff);
    }
@@ -478,8 +479,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int avgdiff=d/length;
 	long unsigned int adj=(T*1000/avgtime);
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
-  if( blockIndex == 24861 || blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
-
+  if(blockIndex == 24922){
     	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,blockIndex);
   }
     if (nextDiffZ <= 1) {
@@ -552,6 +552,8 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
          }
     return nextDiffZ;
   }
+
+
 }
 
 

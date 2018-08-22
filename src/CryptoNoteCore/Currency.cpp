@@ -460,7 +460,8 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
         solvetime = timestamps[i] - timestamps[i-1];
 	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
   if( blockIndex == 24861 || blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
-  	 printf("%lu: TS:%lu    solvetime:%lu,  diff:%lu\n",i,timestamps[i],solvetime,diff);
+    logger(DEBUGGING) << i << ":   " << timestamps[i] << "     " << solvetime << "           " << diff;
+     printf("%lu: TS:%lu    solvetime:%lu,  diff:%lu\n",i,timestamps[i],solvetime,diff);
    }
 
 	//cap crazy  values

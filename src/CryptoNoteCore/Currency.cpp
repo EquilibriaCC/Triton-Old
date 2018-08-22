@@ -444,7 +444,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (version >= BLOCK_MAJOR_VERSION_5) {
 		int64_t T = m_difficultyTarget;
 
-    if( blockIndex == 24861 || blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
+    if(blockIndex == 24922 ||blockIndex == 25356 || blockIndex == 25851 ||blockIndex == 41495 || blockIndex == 42000 || blockIndex ==  42495 || blockIndex == 43000 || blockIndex == 43495 || blockIndex == 44400 || blockIndex == 44495 || blockIndex == 45000 ||blockIndex == 45495){
 
       	printf("size ts:%lu\n",timestamps.size());
     }

@@ -444,7 +444,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (version >= BLOCK_MAJOR_VERSION_5) {
 		int64_t T = m_difficultyTarget;
 
-    if(blockIndex == 25616){
+    if(blockIndex == 29629){
 
       	printf("size ts:%lu\n",timestamps.size());
 }
@@ -459,7 +459,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
     for (size_t i = 1; i < length; i++) {
         solvetime = timestamps[i] - timestamps[i-1];
 	diff = cumulativeDifficulties[i] - cumulativeDifficulties[i-1];
-  if(blockIndex == 25616){
+  if(blockIndex == 29629){
 
      printf("%lu: TS:%lu    solvetime:%lu,  diff:%lu\n",i,timestamps[i],solvetime,diff);
    }
@@ -478,7 +478,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	long unsigned int avgdiff=d/length;
 	long unsigned int adj=(T*1000/avgtime);
 	long unsigned int nextDiffZ = (avgdiff*adj)/1000;
-  if(blockIndex == 25616){
+  if(blockIndex == 29629){
     	printf("avgdiff:%lu, avgtime:%lu   adj:%lu   nextdiff:%lu     height:%lu\n",avgdiff,avgtime,adj,nextDiffZ,blockIndex);
     }
     if (nextDiffZ <= 1) {
@@ -545,7 +545,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
       return 0;
     }
     uint64_t nextDiffZ = low / timeSpan;
-    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || blockIndex == 23000 || blockIndex == 23500 || blockIndex == 24830){
+    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || blockIndex == 23000 || blockIndex == 23500 || blockIndex == 29629){
            printf("Low:%lu   timeSpan:%lu     NextDiff:%lu    height:%u\n",low,timeSpan,nextDiffZ,blockIndex);
 
          }

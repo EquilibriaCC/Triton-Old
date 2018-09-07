@@ -442,12 +442,14 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 10000000;}
 
 	if (version >= BLOCK_MAJOR_VERSION_5) {
-		int64_t T = m_difficultyTarget;
+    printf("old Alloy Run")
+
+    int64_t T = m_difficultyTarget;
 
     if(blockIndex == 29629){
 
       	printf("size ts:%lu\n",timestamps.size());
-}
+      }
     size_t length = timestamps.size();
     assert(length == cumulativeDifficulties.size());
 
@@ -488,6 +490,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 
     return nextDiffZ;
   }
+  printf("old Zawy Run")
   //old
   std::vector<uint64_t> timestamps_o(timestamps);
   std::vector<uint64_t> cumulativeDifficulties_o(cumulativeDifficulties);
@@ -545,10 +548,6 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
       return 0;
     }
     uint64_t nextDiffZ = low / timeSpan;
-    if(blockIndex == 5000 || blockIndex == 6500 || blockIndex == 7000 || blockIndex == 23000 || blockIndex == 23500 || blockIndex == 29629){
-           printf("Low:%lu   timeSpan:%lu     NextDiff:%lu    height:%u\n",low,timeSpan,nextDiffZ,blockIndex);
-
-         }
     return nextDiffZ;
   }
 

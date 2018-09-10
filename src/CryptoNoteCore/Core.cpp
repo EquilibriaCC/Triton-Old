@@ -563,7 +563,6 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
   uint64_t minerReward = 0;
   auto blockValidationResult = validateBlock(cachedBlock, cache, minerReward);
   if (blockValidationResult) {
-    logger(Logging::WARNING) << "Failed to validate block " << cachedBlock.getBlockHash() << ": " << blockValidationResult.message();
     return blockValidationResult;
   }
 
@@ -1806,12 +1805,12 @@ void Core::fillBlockTemplate(BlockTemplate& block, size_t medianSize, size_t max
 
   size_t maxTotalSize = (125 * medianSize) / 100;
   maxTotalSize = std::min(maxTotalSize, maxCumulativeSize) - currency.minerTxBlobReservedSize();
-  
+
    size_t blockSizeLimit  = maxTotalSize;
-   
+
    logger(Logging::DEBUGGING) << "blockSizeLimit:"<< blockSizeLimit;
-   
-   
+
+
 
   TransactionSpentInputsChecker spentInputsChecker;
 

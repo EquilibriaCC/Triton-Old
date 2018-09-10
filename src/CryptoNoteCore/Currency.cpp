@@ -442,7 +442,6 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
 	if (blockIndex >= (UPGRADE_HEIGHT_V5-1) && blockIndex <= (UPGRADE_HEIGHT_V5+DIFFICULTY_WINDOW_V5) ) {return 10000000;}
 
 	if (version >= BLOCK_MAJOR_VERSION_5) {
-    printf("old Alloy Run");
 
     int64_t T = m_difficultyTarget;
 

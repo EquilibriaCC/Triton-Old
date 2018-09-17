@@ -546,6 +546,7 @@ Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::v
       return 0;
     }
     uint64_t nextDiffZ = low / timeSpan;
+    printf("window: %u",c_difficultyWindow);
   //  printf("Low:%lu   timeSpan:%lu     NextDiff:%lu    height:%lu\n",low,timeSpan,nextDiffZ,blockIndex);
 
     return nextDiffZ;
